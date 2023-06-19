@@ -24,6 +24,10 @@ const TopicGroupBase = ({
   const filter = useSelector(selectTopicFilter);
   const topics = useSelector(selectTopicsById(topicsIds));
   const hasTopics = topics.length > 0;
+  const linkToGroupUrl = discussionsPath(Routes.TOPICS.CATEGORY, {
+    courseId,
+    category: groupId,
+  });
 
   const matchesFilter = useMemo(() => (
     filter ? groupTitle?.toLowerCase().includes(filter) : true
@@ -69,10 +73,7 @@ const TopicGroupBase = ({
         {linkToGroup && groupId ? (
           <Link
             className="text-decoration-none text-primary-500"
-            to={discussionsPath(Routes.TOPICS.CATEGORY, {
-              courseId,
-              category: groupId,
-            })}
+            to={linkToGroupUrl().pathname}
           >
             {groupTitle}
           </Link>

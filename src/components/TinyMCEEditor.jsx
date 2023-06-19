@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 
 import { Editor } from '@tinymce/tinymce-react';
-import { useParams } from 'react-router';
+import { useParams } from 'react-router-dom';
 // TinyMCE so the global var exists
 // eslint-disable-next-line no-unused-vars,import/no-extraneous-dependencies
 import tinymce from 'tinymce/tinymce';

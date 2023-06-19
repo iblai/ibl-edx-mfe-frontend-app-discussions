@@ -63,14 +63,14 @@ const TopicPostsView = () => {
       {topicId ? (
         <BackButton
           loading={topicsInProgress}
-          path={backButtonPath()}
+          path={backButtonPath().pathname}
           title={selectedUnit?.name || selectedNonCoursewareTopic?.name || selectedArchivedTopic?.name
             || intl.formatMessage(messages.unnamedTopic)}
         />
       ) : (
         <BackButton
           loading={topicsInProgress}
-          path={discussionsPath(Routes.TOPICS.ALL, { courseId })(location)}
+          path={discussionsPath(Routes.TOPICS.ALL, { courseId })(location).pathname}
           title={selectedSubsection?.displayName || intl.formatMessage(messages.unnamedSubsection)}
         />
       )}

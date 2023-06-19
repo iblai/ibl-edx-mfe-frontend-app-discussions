@@ -64,7 +64,7 @@ const PostLink = ({
             'border-bottom border-light-400': showDivider,
           })
         }
-      to={linkUrl}
+      to={linkUrl().pathname}
       aria-current={checkIsSelected ? 'page' : undefined}
       role="option"
       tabIndex={(checkIsSelected || idx === 0) ? 0 : -1}

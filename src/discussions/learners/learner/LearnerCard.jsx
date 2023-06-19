@@ -23,7 +23,7 @@ const LearnerCard = ({ learner }) => {
   return (
     <Link
       className="discussion-post p-0 text-decoration-none text-gray-900 border-bottom border-light-400"
-      to={linkUrl}
+      to={linkUrl().pathname}
     >
       <div
         className="d-flex flex-row flex-fill mw-100 py-3 px-4 border-primary-500"

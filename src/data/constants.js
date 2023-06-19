@@ -145,16 +145,16 @@ export const Routes = {
   },
   LEARNERS: {
     PATH: `${BASE_PATH}/learners`,
-    POSTS: `${BASE_PATH}/learners/:learnerUsername/posts(/:postId)?`,
+    POSTS: `${BASE_PATH}/learners/:learnerUsername/posts`,
   },
   POSTS: {
     PATH: `${BASE_PATH}/topics/:topicId`,
-    MY_POSTS: `${BASE_PATH}/my-posts(/:postId)?`,
-    ALL_POSTS: `${BASE_PATH}/posts(/:postId)?`,
+    MY_POSTS: `${BASE_PATH}/my-posts`,
+    ALL_POSTS: `${BASE_PATH}/posts`,
     NEW_POST: [
       `${BASE_PATH}/topics/:topicId/posts/:postId`,
       `${BASE_PATH}/topics/:topicId`,
-      `${BASE_PATH}`,
+      `${BASE_PATH}/*`,
     ],
     EDIT_POST: [
       `${BASE_PATH}/category/:category/posts/:postId/edit`,
@@ -172,7 +172,7 @@ export const Routes = {
       `${BASE_PATH}/my-posts/:postId`,
       `${BASE_PATH}/learners/:learnerUsername/posts/:postId`,
     ],
-    PAGE: `${BASE_PATH}/:page`,
+    PAGE: `${BASE_PATH}/:page/*`,
     PAGES: {
       category: `${BASE_PATH}/category/:category/posts/:postId`,
       topics: `${BASE_PATH}/topics/:topicId/posts/:postId`,
@@ -183,7 +183,7 @@ export const Routes = {
   },
   TOPICS: {
     PATH: [
-      `${BASE_PATH}/topics/:topicId?`,
+      `${BASE_PATH}/topics/:topicId`,
       `${BASE_PATH}/category/:category`,
       `${BASE_PATH}/topics`,
     ],
@@ -204,10 +204,19 @@ export const PostsPages = {
   learners: `${BASE_PATH}/learners/:learnerUsername/posts`,
 };
 
+export const PAGES = {
+  CATEGORY: 'category',
+  TOPICS: 'topics',
+  POSTS: 'posts',
+  'MY-POSTS': 'my-posts',
+  LEARNERS: 'learners',
+};
+
 export const ALL_ROUTES = []
   .concat([Routes.TOPICS.CATEGORY_POST, Routes.TOPICS.CATEGORY])
   .concat(Routes.COMMENTS.PATH)
   .concat(Routes.TOPICS.PATH)
+  .concat(Routes.POSTS.EDIT_POST)
   .concat([Routes.POSTS.ALL_POSTS, Routes.POSTS.MY_POSTS])
   .concat([Routes.LEARNERS.POSTS, Routes.LEARNERS.PATH])
   .concat([Routes.DISCUSSIONS.PATH]);

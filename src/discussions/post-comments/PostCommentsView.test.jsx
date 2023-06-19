@@ -3,7 +3,9 @@ import {
 } from '@testing-library/react';
 import MockAdapter from 'axios-mock-adapter';
 import { IntlProvider } from 'react-intl';
-import { MemoryRouter, Route } from 'react-router';
+import {
+  MemoryRouter, Route, Routes, useLocation,
+} from 'react-router-dom';
 import { Factory } from 'rosie';
 
 import { camelCaseObject, initializeMockApp } from '@edx/frontend-platform';
@@ -127,22 +129,26 @@ async function setupCourseConfig(reasonCodesEnabled = true) {
   await executeThunk(fetchCourseConfig(courseId), store.dispatch, store.getState);
 }
 
+const LocationComponent = () => {
+  testLocation = useLocation();
+  return null;
+};
+
 function renderComponent(postId) {
   const wrapper = render(
     <IntlProvider locale="en">
-      <AppProvider store={store}>
+      <AppProvider store={store} wrapWithRouter={false}>
         <DiscussionContext.Provider
-          value={{ courseId, postId }}
+          value={{ courseId, postId, page: 'posts' }}
         >
           <MemoryRouter initialEntries={[`/${courseId}/posts/${postId}`]}>
             <DiscussionContent />
-            <Route
-              path="*"
-              render={({ location }) => {
-                testLocation = location;
-                return null;
-              }}
-            />
+            <Routes>
+              <Route
+                path="*"
+                element={<LocationComponent />}
+              />
+            </Routes>
           </MemoryRouter>
         </DiscussionContext.Provider>
       </AppProvider>

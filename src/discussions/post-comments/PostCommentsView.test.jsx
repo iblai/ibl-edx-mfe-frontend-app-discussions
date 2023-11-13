@@ -12,6 +12,7 @@ import { camelCaseObject, initializeMockApp } from '@edx/frontend-platform';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { AppProvider } from '@edx/frontend-platform/react';
 
+import { getApiBaseUrl } from '../../data/constants';
 import { initializeStore } from '../../store';
 import { executeThunk } from '../../test-utils';
 import { getCohortsApiUrl } from '../cohorts/data/api';
@@ -22,12 +23,13 @@ import { fetchCourseConfig } from '../data/thunks';
 import DiscussionContent from '../discussions-home/DiscussionContent';
 import { getThreadsApiUrl } from '../posts/data/api';
 import { fetchThread, fetchThreads } from '../posts/data/thunks';
+import { fetchCourseTopics } from '../topics/data/thunks';
 import { getDiscussionTourUrl } from '../tours/data/api';
 import { selectTours } from '../tours/data/selectors';
 import { fetchDiscussionTours } from '../tours/data/thunks';
 import discussionTourFactory from '../tours/data/tours.factory';
 import { getCommentsApiUrl } from './data/api';
-import { fetchCommentResponses, fetchThreadComments, removeComment } from './data/thunks';
+import { fetchCommentResponses, removeComment } from './data/thunks';
 
 import '../posts/data/__factories__';
 import './data/__factories__';
@@ -41,44 +43,21 @@ const discussionPostId = 'thread-1';
 const questionPostId = 'thread-2';
 const closedPostId = 'thread-2';
 const courseId = 'course-v1:edX+TestX+Test_Course';
-const reverseOrder = true;
-const enableInContextSidebar = false;
+const topicsApiUrl = `${getApiBaseUrl()}/api/discussion/v1/course_topics/${courseId}`;
 let store;
 let axiosMock;
 let testLocation;
 let container;
 let unmount;
 
-async function mockAxiosReturnPagedComments() {
-  const endorsedArray = [null, false, true];
-  const pageArray = [1, 2];
-
-  endorsedArray.forEach(async (endorsed) => {
-    const postId = endorsed === null ? discussionPostId : questionPostId;
-
-    pageArray.forEach(async (page) => {
-      const params = {
-        thread_id: postId,
-        page,
-        page_size: undefined,
-        requested_fields: 'profile_image',
-        endorsed,
-        reverse_order: reverseOrder,
-        enable_in_context_sidebar: enableInContextSidebar,
-        signal: {},
-      };
-      axiosMock.onGet(commentsApiUrl, { ...params }).reply(200, Factory.build('commentsResult', { can_delete: true }, {
-        threadId: postId,
-        page,
-        pageSize: 1,
-        count: 2,
-        endorsed,
-        childCount: page === 1 ? 2 : 0,
-      }));
-
-      await executeThunk(fetchThreadComments(postId, { ...params }), store.dispatch, store.getState);
-    });
-  });
+async function mockAxiosReturnPagedComments(threadId, endorsed = false, page = 1, count = 2) {
+  axiosMock.onGet(commentsApiUrl).reply(200, Factory.build('commentsResult', { can_delete: true }, {
+    threadId,
+    endorsed,
+    pageSize: 1,
+    count,
+    childCount: page === 1 ? 2 : 0,
+  }));
 }
 
 async function mockAxiosReturnPagedCommentsResponses() {
@@ -95,6 +74,7 @@ async function mockAxiosReturnPagedCommentsResponses() {
     axiosMock.onGet(commentsResponsesApiUrl, { params: { ...paramsTemplate, page } }).reply(
       200,
       Factory.build('commentsResult', null, {
+        threadId: discussionPostId,
         parentId,
         page,
         pageSize: 1,
@@ -134,12 +114,14 @@ const LocationComponent = () => {
   return null;
 };
 
-function renderComponent(postId) {
+function renderComponent(postId, isClosed = false) {
   const wrapper = render(
     <IntlProvider locale="en">
       <AppProvider store={store} wrapWithRouter={false}>
         <DiscussionContext.Provider
-          value={{ courseId, postId, page: 'posts' }}
+          value={{
+            courseId, postId, page: 'posts', isClosed,
+          }}
         >
           <MemoryRouter initialEntries={[`/${courseId}/posts/${postId}`]}>
             <DiscussionContent />
@@ -157,6 +139,45 @@ function renderComponent(postId) {
   container = wrapper.container;
   unmount = wrapper.unmount;
 }
+
+describe('PostView', () => {
+  beforeEach(() => {
+    initializeMockApp({
+      authenticatedUser: {
+        userId: 3,
+        username: 'abc123',
+        administrator: true,
+        roles: [],
+      },
+    });
+
+    store = initializeStore();
+    Factory.resetAll();
+    axiosMock = new MockAdapter(getAuthenticatedHttpClient());
+
+    axiosMock.onGet(topicsApiUrl)
+      .reply(200, {
+        non_courseware_topics: Factory.buildList('topic', 1, {}, { topicPrefix: 'non-courseware-' }),
+        courseware_topics: Factory.buildList('category', 1, {}, { name: 'courseware' }),
+      });
+    executeThunk(fetchCourseTopics(courseId), store.dispatch, store.getState);
+  });
+
+  it('should show Topic Info for non-courseware topics', async () => {
+    await getThreadAPIResponse({ id: 'thread-1', topic_id: 'non-courseware-topic-1' });
+    await waitFor(() => renderComponent(discussionPostId));
+    expect(await screen.findByText('Related to')).toBeInTheDocument();
+    expect(await screen.findByText('non-courseware-topic 1')).toBeInTheDocument();
+  });
+
+  it('should show Topic Info for courseware topics with category', async () => {
+    await getThreadAPIResponse({ id: 'thread-2', topic_id: 'courseware-topic-2' });
+
+    await waitFor(() => renderComponent('thread-2'));
+    expect(await screen.findByText('Related to')).toBeInTheDocument();
+    expect(await screen.findByText('category-1 / courseware-topic 2')).toBeInTheDocument();
+  });
+});
 
 describe('ThreadView', () => {
   beforeEach(async () => {
@@ -191,10 +212,12 @@ describe('ThreadView', () => {
         thread_id: threadId,
       })];
     });
+    axiosMock.onGet(`${courseConfigApiUrl}${courseId}/`).reply(200, { isPostingEnabled: true });
 
+    await executeThunk(fetchCourseConfig(courseId), store.dispatch, store.getState);
     await executeThunk(fetchCourseCohorts(courseId), store.dispatch, store.getState);
+    await mockAxiosReturnPagedComments(discussionPostId);
     await executeThunk(fetchThreads(courseId), store.dispatch, store.getState);
-    await mockAxiosReturnPagedComments();
     await mockAxiosReturnPagedCommentsResponses();
   });
 
@@ -206,6 +229,16 @@ describe('ThreadView', () => {
     function assertLastUpdateData(data) {
       expect(JSON.parse(axiosMock.history.patch[axiosMock.history.patch.length - 1].data)).toMatchObject(data);
     }
+
+    it('should not allow posting a comment on a closed post', async () => {
+      axiosMock.reset();
+      await mockAxiosReturnPagedComments(closedPostId, true);
+      await waitFor(() => renderComponent(closedPostId, true));
+      const comments = await waitFor(() => screen.findAllByTestId('comment-comment-4'));
+      const hoverCard = within(comments[0]).getByTestId('hover-card-comment-4');
+
+      expect(within(hoverCard).getByRole('button', { name: /Add comment/i })).toBeDisabled();
+    });
 
     it('should display post content', async () => {
       await waitFor(() => renderComponent(discussionPostId));
@@ -242,7 +275,6 @@ describe('ThreadView', () => {
     });
 
     it('should show and hide the editor', async () => {
-      await setupCourseConfig();
       await waitFor(() => renderComponent(discussionPostId));
 
       const post = screen.getByTestId('post-thread-1');
@@ -257,7 +289,6 @@ describe('ThreadView', () => {
     });
 
     it('should allow posting a response', async () => {
-      await setupCourseConfig();
       await waitFor(() => renderComponent(discussionPostId));
 
       const post = await screen.findByTestId('post-thread-1');
@@ -272,7 +303,6 @@ describe('ThreadView', () => {
     });
 
     it('should not allow posting a response on a closed post', async () => {
-      await setupCourseConfig();
       renderComponent(closedPostId);
       const post = screen.getByTestId('post-thread-2');
       const hoverCard = within(post).getByTestId('hover-card-thread-2');
@@ -281,7 +311,6 @@ describe('ThreadView', () => {
     });
 
     it('should allow posting a comment', async () => {
-      await setupCourseConfig();
       await waitFor(() => renderComponent(discussionPostId));
 
       const comment = await waitFor(() => screen.findByTestId('comment-comment-1'));
@@ -291,11 +320,10 @@ describe('ThreadView', () => {
       await act(async () => { fireEvent.click(screen.getByText(/submit/i)); });
 
       expect(screen.queryByTestId('tinymce-editor')).not.toBeInTheDocument();
-      await waitFor(async () => expect(await screen.findByTestId('reply-comment-7')).toBeInTheDocument());
+      await waitFor(async () => expect(await screen.findByTestId('reply-comment-2')).toBeInTheDocument());
     });
 
     it('should allow editing an existing comment', async () => {
-      await setupCourseConfig();
       await waitFor(() => renderComponent(discussionPostId));
 
       const comment = await waitFor(() => screen.findByTestId('comment-comment-1'));
@@ -337,6 +365,39 @@ describe('ThreadView', () => {
 
       expect(screen.queryByRole('dialog', { name: /close post/i })).not.toBeInTheDocument();
       assertLastUpdateData({ closed: true, close_reason_code: 'reason-1' });
+    });
+
+    it('should show reason codes when editing an existing comment', async () => {
+      setupCourseConfig();
+      renderComponent(discussionPostId);
+      const comment = await waitFor(() => screen.findByTestId('comment-comment-1'));
+      const hoverCard = within(comment).getByTestId('hover-card-comment-1');
+      await act(async () => {
+        fireEvent.click(
+          within(hoverCard).getByRole('button', { name: /actions menu/i }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+      });
+      expect(screen.queryByRole('combobox', { name: /reason for editing/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('option', { name: /reason \d/i })).toHaveLength(2);
+      await act(async () => {
+        fireEvent.change(
+          screen.queryByRole('combobox', { name: /reason for editing/i }),
+          { target: { value: null } },
+        );
+      });
+      await act(async () => {
+        fireEvent.change(screen.queryByRole('combobox', { name: /reason for editing/i }), { target: { value: 'reason-1' } });
+      });
+      await act(async () => {
+        fireEvent.change(screen.getByTestId('tinymce-editor'), { target: { value: 'testing123' } });
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+      });
+      assertLastUpdateData({ edit_reason_code: 'reason-1' });
     });
 
     it('should close the post directly if reason codes are not enabled', async () => {
@@ -497,8 +558,10 @@ describe('ThreadView', () => {
   });
 
   describe('for discussion thread', () => {
+    const findLoadMoreCommentsButton = () => screen.findByTestId('load-more-comments');
+
     it('shown post not found when post id does not belong to course', async () => {
-      renderComponent('unloaded-id');
+      await waitFor(() => renderComponent('unloaded-id'));
       expect(await screen.findByText('Thread not found', { exact: true }))
         .toBeInTheDocument();
     });
@@ -511,6 +574,70 @@ describe('ThreadView', () => {
         .not
         .toBeInTheDocument();
     });
+
+    it('pressing load more button will load next page of comments', async () => {
+      await waitFor(() => renderComponent(discussionPostId));
+      await mockAxiosReturnPagedComments(discussionPostId, false, 2);
+
+      const loadMoreButton = await findLoadMoreCommentsButton();
+      await act(async () => {
+        fireEvent.click(loadMoreButton);
+      });
+
+      await screen.findByTestId('comment-comment-1');
+      await screen.findByTestId('comment-comment-4');
+    });
+
+    it('newly loaded comments are appended to the old ones', async () => {
+      await waitFor(() => renderComponent(discussionPostId));
+      await mockAxiosReturnPagedComments(discussionPostId, false, 2);
+
+      const loadMoreButton = await findLoadMoreCommentsButton();
+      await act(async () => {
+        fireEvent.click(loadMoreButton);
+      });
+
+      await screen.findByTestId('comment-comment-1');
+      // check that comments from the first page are also displayed
+      expect(screen.queryByTestId('comment-comment-4'))
+        .toBeInTheDocument();
+    });
+  });
+
+  describe('for question thread', () => {
+    const findLoadMoreCommentsButtons = () => screen.findByTestId('load-more-comments');
+
+    it('initially loads only the first page', async () => {
+      await mockAxiosReturnPagedComments(questionPostId);
+      act(() => renderComponent(questionPostId));
+
+      expect(await screen.findByTestId('comment-comment-4'))
+        .toBeInTheDocument();
+      expect(screen.queryByTestId('comment-comment-5'))
+        .not
+        .toBeInTheDocument();
+    });
+
+    it('pressing load more button will load next page of comments', async () => {
+      await mockAxiosReturnPagedComments(questionPostId);
+      await waitFor(() => renderComponent(questionPostId));
+
+      const loadMoreButton = await findLoadMoreCommentsButtons();
+
+      expect(await screen.findByTestId('comment-comment-4'))
+        .toBeInTheDocument();
+      // Comments from next page should not be loaded yet.
+      expect(await screen.queryByTestId('comment-comment-5'))
+        .not
+        .toBeInTheDocument();
+      await mockAxiosReturnPagedComments(questionPostId, false, 2, 1);
+      await act(async () => {
+        fireEvent.click(loadMoreButton);
+      });
+      // Endorsed comment from next page should be loaded now.
+      await waitFor(() => expect(screen.queryByTestId('comment-comment-5'))
+        .toBeInTheDocument());
+    });
   });
 
   describe('for comments replies', () => {
@@ -519,8 +646,8 @@ describe('ThreadView', () => {
     it('initially loads only the first page', async () => {
       await waitFor(() => renderComponent(discussionPostId));
 
-      await waitFor(() => screen.findByTestId('reply-comment-7'));
-      expect(screen.queryByTestId('reply-comment-8')).not.toBeInTheDocument();
+      await waitFor(() => screen.findByTestId('reply-comment-2'));
+      expect(screen.queryByTestId('reply-comment-3')).not.toBeInTheDocument();
     });
 
     it('pressing load more button will load next page of responses', async () => {
@@ -530,8 +657,7 @@ describe('ThreadView', () => {
       await act(async () => {
         fireEvent.click(loadMoreButton);
       });
-
-      await screen.findByTestId('reply-comment-8');
+      await screen.findByTestId('reply-comment-3');
     });
 
     it('newly loaded responses are appended to the old ones', async () => {
@@ -542,9 +668,9 @@ describe('ThreadView', () => {
         fireEvent.click(loadMoreButton);
       });
 
-      await screen.findByTestId('reply-comment-8');
+      await screen.findByTestId('reply-comment-3');
       // check that comments from the first page are also displayed
-      expect(screen.queryByTestId('reply-comment-7')).toBeInTheDocument();
+      expect(screen.queryByTestId('reply-comment-2')).toBeInTheDocument();
     });
 
     it('load more button is hidden when no more responses pages to load', async () => {
@@ -555,8 +681,7 @@ describe('ThreadView', () => {
         fireEvent.click(loadMoreButton);
       });
 
-      await screen.findByTestId('reply-comment-8');
-      await expect(findLoadMoreCommentsResponsesButton()).rejects.toThrow();
+      await screen.findByTestId('reply-comment-3');
     });
   });
 
@@ -590,21 +715,21 @@ describe('ThreadView', () => {
     it('shows action dropdown for replies', async () => {
       await waitFor(() => renderComponent(discussionPostId));
 
-      const reply = await waitFor(() => screen.findByTestId('reply-comment-7'));
+      const reply = await waitFor(() => screen.findByTestId('reply-comment-2'));
       expect(within(reply).getByRole('button', { name: /actions menu/i })).toBeInTheDocument();
     });
 
     it('should display reply content', async () => {
       await waitFor(() => renderComponent(discussionPostId));
 
-      const reply = await waitFor(() => screen.findByTestId('reply-comment-7'));
-      expect(within(reply).queryByTestId('comment-7')).toBeInTheDocument();
+      const reply = await waitFor(() => screen.findByTestId('reply-comment-2'));
+      expect(within(reply).queryByTestId('comment-2')).toBeInTheDocument();
     });
 
     it('shows delete confirmation modal', async () => {
       await waitFor(() => renderComponent(discussionPostId));
 
-      const reply = await waitFor(() => screen.findByTestId('reply-comment-7'));
+      const reply = await waitFor(() => screen.findByTestId('reply-comment-2'));
       await act(async () => { fireEvent.click(within(reply).getByRole('button', { name: /actions menu/i })); });
       await act(async () => { fireEvent.click(screen.queryByRole('button', { name: /Delete/i })); });
 

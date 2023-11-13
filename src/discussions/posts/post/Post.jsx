@@ -143,8 +143,8 @@ const Post = ({ handleAddResponseButton }) => {
         title={intl.formatMessage(messages.deletePostTitle)}
         description={intl.formatMessage(messages.deletePostDescription)}
         onClose={hideDeleteConfirmation}
-        comfirmAction={handleDeleteConfirmation}
-        closeButtonVaraint="tertiary"
+        confirmAction={handleDeleteConfirmation}
+        closeButtonVariant="tertiary"
         confirmButtonText={intl.formatMessage(messages.deleteConfirmationDelete)}
       />
       {!abuseFlagged && (
@@ -153,7 +153,7 @@ const Post = ({ handleAddResponseButton }) => {
           title={intl.formatMessage(messages.reportPostTitle)}
           description={intl.formatMessage(messages.reportPostDescription)}
           onClose={hideReportConfirmation}
-          comfirmAction={handleReportConfirmation}
+          confirmAction={handleReportConfirmation}
           confirmButtonVariant="danger"
         />
       )}

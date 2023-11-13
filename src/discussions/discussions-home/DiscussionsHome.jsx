@@ -8,7 +8,6 @@ import {
 } from 'react-router-dom';
 
 import { LearningHeader as Header } from '@edx/frontend-component-header';
-import { getConfig } from '@edx/frontend-platform';
 
 import { Spinner } from '../../components';
 import { selectCourseTabs } from '../../components/NavigationBar/data/selectors';
@@ -33,7 +32,6 @@ const DiscussionsProductTour = lazy(() => import('../tours/DiscussionsProductTou
 const DiscussionsRestrictionBanner = lazy(() => import('./DiscussionsRestrictionBanner'));
 const DiscussionContent = lazy(() => import('./DiscussionContent'));
 const DiscussionSidebar = lazy(() => import('./DiscussionSidebar'));
-const InformationBanner = lazy(() => import('./InformationBanner'));
 
 const DiscussionsHome = () => {
   const location = useLocation();
@@ -50,10 +48,6 @@ const DiscussionsHome = () => {
   const isOnDesktop = useIsOnDesktop();
   let displaySidebar = useSidebarVisible();
   const enableInContextSidebar = Boolean(new URLSearchParams(location.search).get('inContextSidebar') !== null);
-  const isFeedbackBannerVisible = getConfig().DISPLAY_FEEDBACK_BANNER === 'true';
-  const isTopicDetailPage = Boolean(useMatch(ROUTES.POSTS.PATH));
-  const isCategoryDetailPage = Boolean(useMatch(ROUTES.TOPICS.CATEGORY));
-  const isBreadcrumbVisible = isTopicDetailPage || isCategoryDetailPage;
   const {
     courseId, postId, topicId, category, learnerUsername,
   } = params;
@@ -63,7 +57,7 @@ const DiscussionsHome = () => {
   useFeedbackWrapper();
   /*  Display the content area if we are currently viewing/editing a post or creating one.
   If the window is larger than a particular size, show the sidebar for navigating between posts/topics.
-  However, for smaller screens or embeds, onlyshow the sidebar if the content area isn't displayed. */
+  However, for smaller screens or embeds, only show the sidebar if the content area isn't displayed. */
   const displayContentArea = (postId || postEditorVisible || (learnerUsername && postId));
   if (displayContentArea) { displaySidebar = isOnDesktop; }
 
@@ -100,10 +94,9 @@ const DiscussionsHome = () => {
               )}
               <PostActionsBar />
             </div>
-            {isFeedbackBannerVisible && <InformationBanner />}
             <DiscussionsRestrictionBanner />
           </div>
-          {provider === DiscussionProvider.LEGACY && isBreadcrumbVisible && (
+          {provider === DiscussionProvider.LEGACY && (
             <Routes>
               <Suspense fallback={(<Spinner />)}>
                 <Route

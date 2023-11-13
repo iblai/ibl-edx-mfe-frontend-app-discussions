@@ -145,12 +145,12 @@ export const Routes = {
   },
   LEARNERS: {
     PATH: `${BASE_PATH}/learners`,
-    POSTS: `${BASE_PATH}/learners/:learnerUsername/posts`,
+    POSTS: `${BASE_PATH}/learners/:learnerUsername/posts/:postId?`,
   },
   POSTS: {
     PATH: `${BASE_PATH}/topics/:topicId`,
-    MY_POSTS: `${BASE_PATH}/my-posts`,
-    ALL_POSTS: `${BASE_PATH}/posts`,
+    MY_POSTS: `${BASE_PATH}/my-posts/:postId?`,
+    ALL_POSTS: `${BASE_PATH}/posts/:postId?`,
     NEW_POST: [
       `${BASE_PATH}/topics/:topicId/posts/:postId`,
       `${BASE_PATH}/topics/:topicId`,
@@ -183,7 +183,7 @@ export const Routes = {
   },
   TOPICS: {
     PATH: [
-      `${BASE_PATH}/topics/:topicId`,
+      `${BASE_PATH}/topics/:topicId?`,
       `${BASE_PATH}/category/:category`,
       `${BASE_PATH}/topics`,
     ],

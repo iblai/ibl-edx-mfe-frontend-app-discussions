@@ -126,7 +126,7 @@ const PostEditor = ({
         learnerUsername: post?.author,
         category,
       })(location);
-      navigate(newLocation.pathname);
+      navigate(newLocation);
     }
     dispatch(hidePostEditor());
   }, [postId, topicId, post?.author, category, editExisting, commentsPagePath, location]);

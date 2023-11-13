@@ -93,15 +93,7 @@ const DiscussionSidebar = ({ displaySidebar, postActionBarRef }) => {
             element={<PostsView />}
           />
           <Route
-            path={ROUTES.COMMENTS.PAGES.posts}
-            element={<PostsView />}
-          />
-          <Route
             path={ROUTES.POSTS.MY_POSTS}
-            element={<PostsView />}
-          />
-          <Route
-            path={ROUTES.COMMENTS.PAGES['my-posts']}
             element={<PostsView />}
           />
           <Route
@@ -124,10 +116,7 @@ const DiscussionSidebar = ({ displaySidebar, postActionBarRef }) => {
             <Route key={path} path={path} element={<LegacyTopicsView />} />
           ))}
           {redirectToLearnersTab && (
-            <>
-              <Route path={ROUTES.LEARNERS.POSTS} element={<LearnerPostsView />} />
-              <Route path={ROUTES.COMMENTS.PAGES.learners} element={<LearnerPostsView />} />
-            </>
+            <Route path={ROUTES.LEARNERS.POSTS} element={<LearnerPostsView />} />
           )}
           {redirectToLearnersTab && (
             <Route path={ROUTES.LEARNERS.PATH} element={<LearnersView />} />

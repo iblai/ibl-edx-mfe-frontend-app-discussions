@@ -41,7 +41,7 @@ const Topic = ({
           'border-light-400 border-bottom': showDivider,
         })}
         data-topic-id={topic.id}
-        to={topicUrl().pathname}
+        to={topicUrl()}
         onClick={() => isSelected(topic.id)}
         aria-current={isSelected(topic.id) ? 'page' : undefined}
         role="option"

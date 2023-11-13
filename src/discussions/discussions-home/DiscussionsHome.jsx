@@ -97,8 +97,8 @@ const DiscussionsHome = () => {
             <DiscussionsRestrictionBanner />
           </div>
           {provider === DiscussionProvider.LEGACY && (
-            <Routes>
-              <Suspense fallback={(<Spinner />)}>
+            <Suspense fallback={(<Spinner />)}>
+              <Routes>
                 <Route
                   path={ROUTES.POSTS.PATH}
                   element={<LegacyBreadcrumbMenu />}
@@ -107,8 +107,8 @@ const DiscussionsHome = () => {
                   path={ROUTES.TOPICS.CATEGORY}
                   element={<LegacyBreadcrumbMenu />}
                 />
-              </Suspense>
-            </Routes>
+              </Routes>
+            </Suspense>
           )}
           <div className="d-flex flex-row position-relative">
             <Suspense fallback={(<Spinner />)}>

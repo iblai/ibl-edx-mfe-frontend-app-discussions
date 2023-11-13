@@ -40,7 +40,7 @@ const SectionBaseGroup = ({
         role="option"
         data-subsection-id={subsection.id}
         data-testid="subsection-group"
-        to={sectionUrl(subsection.id)().pathname}
+        to={sectionUrl(subsection.id)()}
         onClick={() => isSelected(subsection.id)}
         aria-current={isSelected(section.id) ? 'page' : undefined}
         tabIndex={(isSelected(subsection.id) || index === 0) ? 0 : -1}

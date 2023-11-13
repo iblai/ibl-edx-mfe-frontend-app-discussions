@@ -85,9 +85,9 @@ const LearnersView = () => {
       )}
       <div className="list-group list-group-flush learner" role="list">
         {courseConfigLoadingStatus === RequestStatus.SUCCESSFUL && !learnersTabEnabled && (
-        <Navigate
-          to={`${truncatePath(location.pathname)}`}
-        />
+          <Navigate
+            to={`${truncatePath(location.pathname)}`}
+          />
         )}
         {renderLearnersList}
         {loadingStatus === RequestStatus.IN_PROGRESS ? (

@@ -49,7 +49,7 @@ const NavigationBar = () => {
           <Nav.Link
             key={link.route}
             as={NavLink}
-            to={discussionsPath(link.route, { courseId })().pathname}
+            to={discussionsPath(link.route, { courseId })()}
             className={isTopicsNavActive && link.route === Routes.TOPICS.ALL && 'active'}
           >
             {intl.formatMessage(link.labelMessage)}

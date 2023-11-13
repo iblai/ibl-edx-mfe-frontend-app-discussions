@@ -83,7 +83,7 @@ const LearnerPostsView = () => {
           iconAs={Icon}
           style={{ padding: '18px' }}
           size="inline"
-          onClick={() => navigate(discussionsPath(Routes.LEARNERS.PATH, { courseId })(location).pathname)}
+          onClick={() => navigate(discussionsPath(Routes.LEARNERS.PATH, { courseId })(location))}
           alt={intl.formatMessage(messages.back)}
         />
         <div className="text-primary-500 font-style font-weight-bold py-2.5">

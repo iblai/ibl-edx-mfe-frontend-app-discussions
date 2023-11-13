@@ -39,12 +39,12 @@ const PostCommentsView = () => {
   } = useContext(DiscussionContext);
   const commentsCount = useCommentsCount(postId);
   const { closed, id: threadId, type } = usePost(postId);
-  let redirectUrl = discussionsPath(PostsPages[page], {
+  const redirectUrl = discussionsPath(PostsPages[page], {
     courseId, learnerUsername, category, topicId,
-  })(location).pathname;
+  })(location);
 
   if (page === PAGES.TOPICS || page === PAGES.CATEGORY) {
-    redirectUrl = truncatePath(redirectUrl);
+    redirectUrl.pathname = truncatePath(redirectUrl.pathname);
   }
 
   useEffect(() => {

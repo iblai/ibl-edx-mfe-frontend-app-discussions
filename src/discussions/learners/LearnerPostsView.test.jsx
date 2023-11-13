@@ -53,7 +53,7 @@ async function renderComponent() {
         >
           <MemoryRouter initialEntries={[`/${courseId}/learners/${username}/posts`]}>
             <Routes>
-              <Route path="/:courseId/learners/:learnerUsername/posts" element={<><LearnerPostsView /><LocationComponent /></>} />
+              <Route path="/:courseId/learners/:learnerUsername?/posts?" element={<><LearnerPostsView /><LocationComponent /></>} />
             </Routes>
           </MemoryRouter>
         </DiscussionContext.Provider>

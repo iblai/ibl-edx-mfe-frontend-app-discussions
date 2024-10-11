@@ -5,7 +5,7 @@ import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { initializeMockApp } from '@edx/frontend-platform/testing';
 
 import { initializeStore } from '../../../store';
-import { executeThunk } from '../../../test-utils';
+import executeThunk from '../../../test-utils';
 import { getThreadsApiUrl } from './api';
 import {
   createNewThread, fetchThread, fetchThreads, removeThread, updateExistingThread,
@@ -102,7 +102,7 @@ describe('Threads/Posts data layer tests', () => {
     expect(store.getState().threads.threadsById['thread-1'])
       .toHaveProperty('topicId');
     expect(store.getState().threads.threadsById['thread-1'].topicId)
-      .toEqual('some-topic-1');
+      .toEqual('test-topic-1');
   });
 
   test('successfully handles thread creation', async () => {

@@ -1,29 +1,28 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { useRouteMatch } from 'react-router';
+import { useParams } from 'react-router-dom';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
-import { ALL_ROUTES } from '../../data/constants';
-import { useIsOnDesktop, useTotalTopicThreadCount } from '../data/hooks';
+import { useIsOnTablet, useTotalTopicThreadCount } from '../data/hooks';
 import { selectTopicThreadCount } from '../data/selectors';
 import messages from '../messages';
-import { messages as postMessages, showPostEditor } from '../posts';
+import { showPostEditor } from '../posts/data';
+import postMessages from '../posts/post-actions-bar/messages';
 import EmptyPage from './EmptyPage';
 
-function EmptyTopics({ intl }) {
-  const match = useRouteMatch(ALL_ROUTES);
+const EmptyTopics = () => {
+  const intl = useIntl();
+  const { topicId } = useParams();
   const dispatch = useDispatch();
-
+  const isOnTabletorDesktop = useIsOnTablet();
   const hasGlobalThreads = useTotalTopicThreadCount() > 0;
-  const topicThreadCount = useSelector(selectTopicThreadCount(match.params.topicId));
+  const topicThreadCount = useSelector(selectTopicThreadCount(topicId));
 
-  function addPost() {
-    return dispatch(showPostEditor());
-  }
-
-  const isOnDesktop = useIsOnDesktop();
+  const addPost = useCallback(() => (
+    dispatch(showPostEditor())
+  ), []);
 
   let title = messages.emptyTitle;
   let fullWidth = false;
@@ -31,11 +30,11 @@ function EmptyTopics({ intl }) {
   let action;
   let actionText;
 
-  if (!isOnDesktop) {
+  if (!isOnTabletorDesktop) {
     return null;
   }
 
-  if (match.params.topicId) {
+  if (topicId) {
     if (topicThreadCount > 0) {
       title = messages.noPostSelected;
     } else {
@@ -62,10 +61,6 @@ function EmptyTopics({ intl }) {
       fullWidth={fullWidth}
     />
   );
-}
-
-EmptyTopics.propTypes = {
-  intl: intlShape.isRequired,
 };
 
-export default injectIntl(EmptyTopics);
+export default EmptyTopics;

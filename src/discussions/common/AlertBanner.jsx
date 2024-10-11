@@ -1,71 +1,97 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import { Alert } from '@openedx/paragon';
+import { Report } from '@openedx/paragon/icons';
 import { useSelector } from 'react-redux';
 
 import { getAuthenticatedUser } from '@edx/frontend-platform/auth';
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import { Alert } from '@edx/paragon';
-import { Error } from '@edx/paragon/icons';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
-import { commentShape } from '../comments/comment/proptypes';
-import messages from '../comments/messages';
-import { selectModerationSettings, selectUserHasModerationPrivileges, selectUserIsGroupTa } from '../data/selectors';
-import { postShape } from '../posts/post/proptypes';
-import AuthorLabel from './AuthorLabel';
+import { AvatarOutlineAndLabelColors } from '../../data/constants';
+import {
+  selectUserHasModerationPrivileges, selectUserIsGroupTa, selectUserIsStaff,
+} from '../data/selectors';
+import messages from '../post-comments/messages';
+import AlertBar from './AlertBar';
 
-function AlertBanner({
-  intl,
-  content,
-}) {
+const AlertBanner = ({
+  author,
+  abuseFlagged,
+  lastEdit,
+  closed,
+  closedBy,
+  closeReason,
+  editByLabel,
+  closedByLabel,
+}) => {
+  const intl = useIntl();
   const userHasModerationPrivileges = useSelector(selectUserHasModerationPrivileges);
   const userIsGroupTa = useSelector(selectUserIsGroupTa);
-  const { reasonCodesEnabled } = useSelector(selectModerationSettings);
-  const userIsContentAuthor = getAuthenticatedUser().username === content.author;
-  const canSeeLastEditOrClosedAlert = (userHasModerationPrivileges || userIsContentAuthor || userIsGroupTa);
-  const canSeeReportedBanner = content?.abuseFlagged;
+  const userIsGlobalStaff = useSelector(selectUserIsStaff);
+  const userIsContentAuthor = getAuthenticatedUser().username === author;
+  const canSeeReportedBanner = abuseFlagged;
+  const canSeeLastEditOrClosedAlert = (userHasModerationPrivileges || userIsGroupTa
+    || userIsGlobalStaff || userIsContentAuthor
+  );
+  const editByLabelColor = AvatarOutlineAndLabelColors[editByLabel];
+  const closedByLabelColor = AvatarOutlineAndLabelColors[closedByLabel];
 
   return (
     <>
       {canSeeReportedBanner && (
-        <Alert icon={Error} variant="danger" className="px-3 mb-2 py-10px shadow-none flex-fill">
+        <Alert icon={Report} variant="danger" className="px-3 mb-1 py-10px shadow-none flex-fill">
           {intl.formatMessage(messages.abuseFlaggedMessage)}
         </Alert>
       )}
-      {reasonCodesEnabled && canSeeLastEditOrClosedAlert && (
+      { canSeeLastEditOrClosedAlert && (
         <>
-          {content.lastEdit?.reason && (
-            <Alert variant="info" className="px-3 shadow-none mb-2 py-10px bg-light-200">
-              <div className="d-flex align-items-center flex-wrap">
-                {intl.formatMessage(messages.editedBy)}
-                <span className="ml-1 mr-3">
-                  <AuthorLabel author={content.lastEdit.editorUsername} linkToProfile />
-                </span>
-                {intl.formatMessage(messages.reason)}:&nbsp;{content.lastEdit.reason}
-              </div>
-            </Alert>
+          {lastEdit?.reason && (
+            <AlertBar
+              message={intl.formatMessage(messages.editedBy)}
+              author={lastEdit.editorUsername}
+              authorLabel={editByLabel}
+              labelColor={editByLabelColor && `text-${editByLabelColor}`}
+              reason={lastEdit.reason}
+            />
           )}
-          {content.closed && (
-            <Alert variant="info" className="px-3 shadow-none mb-2 py-10px bg-light-200">
-              <div className="d-flex align-items-center flex-wrap">
-                {intl.formatMessage(messages.closedBy)}
-                <span className="ml-1 ">
-                  <AuthorLabel author={content.closedBy} linkToProfile />
-                </span>
-                <span className="mx-1" />
-                {content.closeReason && (`${intl.formatMessage(messages.reason)}: ${content.closeReason}`)}
-              </div>
-            </Alert>
+          {closed && (
+            <AlertBar
+              message={intl.formatMessage(messages.closedBy)}
+              author={closedBy}
+              authorLabel={closedByLabel}
+              labelColor={closedByLabelColor && `text-${closedByLabelColor}`}
+              reason={closeReason}
+            />
           )}
         </>
       )}
     </>
   );
-}
-
-AlertBanner.propTypes = {
-  intl: intlShape.isRequired,
-  content: PropTypes.oneOfType([commentShape.isRequired, postShape.isRequired]).isRequired,
 };
 
-export default injectIntl(AlertBanner);
+AlertBanner.propTypes = {
+  author: PropTypes.string.isRequired,
+  abuseFlagged: PropTypes.bool,
+  closed: PropTypes.bool,
+  closedBy: PropTypes.string,
+  closedByLabel: PropTypes.string,
+  closeReason: PropTypes.string,
+  editByLabel: PropTypes.string,
+  lastEdit: PropTypes.shape({
+    editorUsername: PropTypes.string,
+    reason: PropTypes.string,
+  }),
+};
+
+AlertBanner.defaultProps = {
+  abuseFlagged: false,
+  closed: undefined,
+  closedBy: undefined,
+  closedByLabel: undefined,
+  closeReason: undefined,
+  editByLabel: undefined,
+  lastEdit: {},
+};
+
+export default React.memo(AlertBanner);

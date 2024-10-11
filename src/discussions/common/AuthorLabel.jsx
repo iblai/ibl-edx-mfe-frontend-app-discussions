@@ -1,105 +1,129 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import PropTypes from 'prop-types';
 
+import { Icon, OverlayTrigger, Tooltip } from '@openedx/paragon';
 import classNames from 'classnames';
-import { Link, useLocation } from 'react-router-dom';
+import { generatePath, Link } from 'react-router-dom';
+import * as timeago from 'timeago.js';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import { Icon } from '@edx/paragon';
-import { Institution, School } from '@edx/paragon/icons';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
 import { Routes } from '../../data/constants';
-import { useShowLearnersTab } from '../data/hooks';
 import messages from '../messages';
-import { discussionsPath } from '../utils';
-import { DiscussionContext } from './context';
+import { getAuthorLabel } from '../utils';
+import DiscussionContext from './context';
+import timeLocale from './time-locale';
 
-function AuthorLabel({
-  intl,
+const AuthorLabel = ({
   author,
   authorLabel,
   linkToProfile,
   labelColor,
   alert,
-}) {
-  const location = useLocation();
-  const { courseId } = useContext(DiscussionContext);
-  let icon = null;
-  let authorLabelMessage = null;
-
-  if (authorLabel === 'Staff') {
-    icon = Institution;
-    authorLabelMessage = intl.formatMessage(messages.authorLabelStaff);
-  }
-  if (authorLabel === 'Community TA') {
-    icon = School;
-    authorLabelMessage = intl.formatMessage(messages.authorLabelTA);
-  }
+  postCreatedAt,
+  authorToolTip,
+  postOrComment,
+}) => {
+  timeago.register('time-locale', timeLocale);
+  const intl = useIntl();
+  const { courseId, enableInContextSidebar } = useContext(DiscussionContext);
+  const { icon, authorLabelMessage } = useMemo(() => getAuthorLabel(intl, authorLabel), [authorLabel]);
 
   const isRetiredUser = author ? author.startsWith('retired__user') : false;
+  const showTextPrimary = !authorLabelMessage && !isRetiredUser && !alert;
+  const className = classNames('d-flex align-items-center', { 'mb-0.5': !postOrComment }, labelColor);
 
-  const className = classNames('d-flex align-items-center', labelColor);
+  const showUserNameAsLink = linkToProfile && author && author !== intl.formatMessage(messages.anonymous)
+                             && !enableInContextSidebar;
 
-  const showUserNameAsLink = useShowLearnersTab()
-      && linkToProfile && author && author !== intl.formatMessage(messages.anonymous);
+  const authorName = useMemo(() => (
+    <span
+      className={classNames('mr-1.5 font-style font-weight-500 author-name', {
+        'text-gray-700': isRetiredUser,
+        'text-primary-500': !authorLabelMessage && !isRetiredUser,
+      })}
+      role="heading"
+      aria-level="2"
+    >
+      {isRetiredUser ? '[Deactivated]' : author}
+    </span>
+  ), [author, authorLabelMessage, isRetiredUser]);
 
-  const labelContents = (
-    <div className={className}>
-      <span
-        className={classNames('mr-1 font-size-14 font-style-normal font-family-inter font-weight-500', {
-          'text-gray-700': isRetiredUser,
-          'text-primary-500': !authorLabelMessage && !isRetiredUser && !alert,
-        })}
-        role="heading"
-        aria-level="2"
+  const labelContents = useMemo(() => (
+    <>
+      <OverlayTrigger
+        placement={authorToolTip ? 'top' : 'right'}
+        overlay={(
+          <Tooltip id={authorToolTip ? `endorsed-by-${author}-tooltip` : `${authorLabel}-label-tooltip`}>
+            {authorToolTip ? author : authorLabel}
+          </Tooltip>
+        )}
+        trigger={['hover', 'focus']}
       >
-        {isRetiredUser ? '[Deactivated]' : author }
-      </span>
-      {icon && (
-        <Icon
-          style={{
-            width: '1rem',
-            height: '1rem',
-          }}
-          src={icon}
-        />
-      )}
-      {authorLabelMessage && (
+        <div className={classNames('d-flex flex-row align-items-center')}>
+          <Icon
+            style={{
+              width: '1rem',
+              height: '1rem',
+            }}
+            src={icon}
+            data-testid="author-icon"
+          />
+          {authorLabelMessage && (
+            <span
+              className={classNames('mr-1.5 font-style font-weight-500', {
+                'text-primary-500': showTextPrimary,
+                'text-gray-700': isRetiredUser,
+              })}
+              style={{ marginLeft: '2px' }}
+            >
+              {authorLabelMessage}
+            </span>
+          )}
+        </div>
+      </OverlayTrigger>
+      {postCreatedAt && (
         <span
-          className={classNames('mr-1 font-size-14 font-style-normal font-family-inter font-weight-500', {
-            'text-primary-500': !authorLabelMessage && !isRetiredUser && !alert,
-            'text-gray-700': isRetiredUser,
+          title={postCreatedAt}
+          className={classNames('align-content-center post-summary-timestamp', {
+            'text-white': alert,
+            'text-gray-500': !alert,
           })}
-          style={{ marginLeft: '2px' }}
+          style={{ lineHeight: '20px', fontSize: '12px', marginBottom: '-2.3px' }}
         >
-          {authorLabelMessage}
+          {timeago.format(postCreatedAt, 'time-locale')}
         </span>
       )}
-    </div>
-  );
+    </>
+  ), [author, authorLabelMessage, authorToolTip, icon, isRetiredUser, postCreatedAt, showTextPrimary, alert]);
 
   return showUserNameAsLink
     ? (
-      <Link
-        data-testid="learner-posts-link"
-        id="learner-posts-link"
-        to={discussionsPath(Routes.LEARNERS.POSTS, { learnerUsername: author, courseId })(location)}
-        className="text-decoration-none"
-        style={{ width: 'fit-content' }}
-      >
+      <div className={`${className} flex-wrap`}>
+        <Link
+          data-testid="learner-posts-link"
+          id="learner-posts-link"
+          to={generatePath(Routes.LEARNERS.POSTS, { learnerUsername: author, courseId })}
+          className="text-decoration-none text-reset"
+          style={{ width: 'fit-content' }}
+        >
+          {!alert && authorName}
+        </Link>
         {labelContents}
-      </Link>
+      </div>
     )
-    : <>{labelContents}</>;
-}
+    : <div className={`${className} flex-wrap`}>{authorName}{labelContents}</div>;
+};
 
 AuthorLabel.propTypes = {
-  intl: intlShape.isRequired,
   author: PropTypes.string.isRequired,
   authorLabel: PropTypes.string,
   linkToProfile: PropTypes.bool,
   labelColor: PropTypes.string,
   alert: PropTypes.bool,
+  postCreatedAt: PropTypes.string,
+  authorToolTip: PropTypes.bool,
+  postOrComment: PropTypes.bool,
 };
 
 AuthorLabel.defaultProps = {
@@ -107,6 +131,9 @@ AuthorLabel.defaultProps = {
   authorLabel: null,
   labelColor: '',
   alert: false,
+  postCreatedAt: null,
+  authorToolTip: false,
+  postOrComment: false,
 };
 
-export default injectIntl(AuthorLabel);
+export default React.memo(AuthorLabel);

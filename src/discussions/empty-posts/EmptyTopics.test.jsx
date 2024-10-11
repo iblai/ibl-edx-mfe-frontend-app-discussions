@@ -2,18 +2,18 @@ import { render, screen } from '@testing-library/react';
 import MockAdapter from 'axios-mock-adapter';
 import { IntlProvider } from 'react-intl';
 import { Context as ResponsiveContext } from 'react-responsive';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { Factory } from 'rosie';
 
 import { initializeMockApp } from '@edx/frontend-platform';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { AppProvider } from '@edx/frontend-platform/react';
 
-import { getApiBaseUrl } from '../../data/constants';
+import { getApiBaseUrl, Routes as ROUTES } from '../../data/constants';
 import { initializeStore } from '../../store';
-import { executeThunk } from '../../test-utils';
+import executeThunk from '../../test-utils';
 import messages from '../messages';
-import { fetchCourseTopics } from '../topics/data/thunks';
+import fetchCourseTopics from '../topics/data/thunks';
 import EmptyTopics from './EmptyTopics';
 
 import '../topics/data/__factories__';
@@ -26,9 +26,12 @@ function renderComponent(location = `/${courseId}/topics/`) {
   return render(
     <IntlProvider locale="en">
       <ResponsiveContext.Provider value={{ width: 1280 }}>
-        <AppProvider store={store}>
+        <AppProvider store={store} wrapWithRouter={false}>
           <MemoryRouter initialEntries={[location]}>
-            <EmptyTopics />
+            <Routes>
+              <Route path={ROUTES.TOPICS.ALL} element={<EmptyTopics />} />
+              <Route path={ROUTES.TOPICS.TOPIC} element={<EmptyTopics />} />
+            </Routes>
           </MemoryRouter>
         </AppProvider>
       </ResponsiveContext.Provider>

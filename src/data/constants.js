@@ -1,6 +1,9 @@
 import { getConfig } from '@edx/frontend-platform';
 
 export const getApiBaseUrl = () => getConfig().LMS_BASE_URL;
+export const getFullUrl = (path) => (
+  new URL(`${getConfig().PUBLIC_PATH.replace(/\/$/, '')}/${path}`, window.location.origin).href
+);
 
 /**
  * Enum for thread types.
@@ -63,6 +66,7 @@ export const ContentActions = {
  * @enum {string}
  */
 export const RequestStatus = {
+  IDLE: 'idle',
   IN_PROGRESS: 'in-progress',
   SUCCESSFUL: 'successful',
   FAILED: 'failed',
@@ -76,6 +80,7 @@ export const RequestStatus = {
  */
 export const AvatarOutlineAndLabelColors = {
   Staff: 'staff-color',
+  Moderator: 'TA-color',
   'Community TA': 'TA-color',
 };
 
@@ -143,18 +148,17 @@ export const Routes = {
     PATH: BASE_PATH,
   },
   LEARNERS: {
-    PATH: `${BASE_PATH}/learners`,
-    POSTS: `${BASE_PATH}/learners/:learnerUsername/posts(/:postId)?`,
+    PATH: `${BASE_PATH}/learners/:learnerUsername?`,
+    POSTS: `${BASE_PATH}/learners/:learnerUsername/posts/:postId?`,
+    POSTS_EDIT: `${BASE_PATH}/learners/:learnerUsername/posts/:postId/edit`,
   },
   POSTS: {
     PATH: `${BASE_PATH}/topics/:topicId`,
-    MY_POSTS: `${BASE_PATH}/my-posts(/:postId)?`,
-    ALL_POSTS: `${BASE_PATH}/posts(/:postId)?`,
-    NEW_POST: [
-      `${BASE_PATH}/topics/:topicId/posts/:postId`,
-      `${BASE_PATH}/topics/:topicId`,
-      `${BASE_PATH}`,
-    ],
+    MY_POSTS: `${BASE_PATH}/my-posts/:postId?`,
+    ALL_POSTS: `${BASE_PATH}/posts/:postId?`,
+    EDIT_MY_POSTS: `${BASE_PATH}/my-posts/:postId/edit`,
+    EDIT_ALL_POSTS: `${BASE_PATH}/posts/:postId/edit`,
+    NEW_POST: `${BASE_PATH}/*`,
     EDIT_POST: [
       `${BASE_PATH}/category/:category/posts/:postId/edit`,
       `${BASE_PATH}/topics/:topicId/posts/:postId/edit`,
@@ -165,19 +169,19 @@ export const Routes = {
   },
   COMMENTS: {
     PATH: [
-      `${BASE_PATH}/category/:category/posts/:postId`,
-      `${BASE_PATH}/topics/:topicId/posts/:postId`,
+      `${BASE_PATH}/category/:category/posts/:postId?`,
+      `${BASE_PATH}/topics/:topicId/posts/:postId?`,
       `${BASE_PATH}/posts/:postId`,
       `${BASE_PATH}/my-posts/:postId`,
-      `${BASE_PATH}/learners/:learnerUsername/posts/:postId`,
+      `${BASE_PATH}/learners/:learnerUsername/posts/:postId?`,
     ],
-    PAGE: `${BASE_PATH}/:page`,
+    PAGE: `${BASE_PATH}/:page/*`,
     PAGES: {
-      category: `${BASE_PATH}/category/:category/posts/:postId`,
-      topics: `${BASE_PATH}/topics/:topicId/posts/:postId`,
+      category: `${BASE_PATH}/category/:category/posts/:postId?`,
+      topics: `${BASE_PATH}/topics/:topicId/posts/:postId?`,
       posts: `${BASE_PATH}/posts/:postId`,
       'my-posts': `${BASE_PATH}/my-posts/:postId`,
-      learners: `${BASE_PATH}/learners/:learnerUsername/posts/:postId`,
+      learners: `${BASE_PATH}/learners/:learnerUsername/posts/:postId?`,
     },
   },
   TOPICS: {
@@ -188,8 +192,11 @@ export const Routes = {
     ],
     ALL: `${BASE_PATH}/topics`,
     CATEGORY: `${BASE_PATH}/category/:category`,
-    CATEGORY_POST: `${BASE_PATH}/category/:category/posts/:postId`,
+    CATEGORY_POST: `${BASE_PATH}/category/:category/posts/:postId?`,
+    CATEGORY_POST_EDIT: `${BASE_PATH}/category/:category/posts/:postId/edit`,
     TOPIC: `${BASE_PATH}/topics/:topicId`,
+    TOPIC_POST: `${BASE_PATH}/topics/:topicId/posts/:postId?`,
+    TOPIC_POST_EDIT: `${BASE_PATH}/topics/:topicId/posts/:postId/edit`,
   },
 };
 
@@ -202,11 +209,12 @@ export const PostsPages = {
 };
 
 export const ALL_ROUTES = []
-  .concat([Routes.TOPICS.CATEGORY_POST, Routes.TOPICS.CATEGORY])
+  .concat([Routes.TOPICS.CATEGORY_POST, `${Routes.TOPICS.CATEGORY}?`])
   .concat(Routes.COMMENTS.PATH)
   .concat(Routes.TOPICS.PATH)
+  .concat(Routes.POSTS.EDIT_POST)
   .concat([Routes.POSTS.ALL_POSTS, Routes.POSTS.MY_POSTS])
   .concat([Routes.LEARNERS.POSTS, Routes.LEARNERS.PATH])
-  .concat([Routes.DISCUSSIONS.PATH]);
+  .concat([`${Routes.DISCUSSIONS.PATH}/*`]);
 
 export const MAX_UPLOAD_FILE_SIZE = 1024;

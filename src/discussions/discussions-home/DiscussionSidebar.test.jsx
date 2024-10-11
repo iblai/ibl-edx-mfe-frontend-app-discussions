@@ -3,7 +3,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { act } from 'react-dom/test-utils';
 import { IntlProvider } from 'react-intl';
 import { Context as ResponsiveContext } from 'react-responsive';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter } from 'react-router-dom';
 import { Factory } from 'rosie';
 
 import { initializeMockApp } from '@edx/frontend-platform';
@@ -11,7 +11,7 @@ import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { AppProvider } from '@edx/frontend-platform/react';
 
 import { initializeStore } from '../../store';
-import { DiscussionContext } from '../common/context';
+import DiscussionContext from '../common/context';
 import { fetchConfigSuccess } from '../data/slices';
 import { getThreadsApiUrl } from '../posts/data/api';
 import DiscussionSidebar from './DiscussionSidebar';
@@ -28,8 +28,8 @@ function renderComponent(displaySidebar = true, location = `/${courseId}/`) {
   const wrapper = render(
     <IntlProvider locale="en">
       <ResponsiveContext.Provider value={{ width: 1280 }}>
-        <AppProvider store={store}>
-          <DiscussionContext.Provider value={{ courseId }}>
+        <AppProvider store={store} wrapWithRouter={false}>
+          <DiscussionContext.Provider value={{ courseId, page: 'posts' }}>
             <MemoryRouter initialEntries={[location]}>
               <DiscussionSidebar displaySidebar={displaySidebar} postActionBarRef={null} />
             </MemoryRouter>

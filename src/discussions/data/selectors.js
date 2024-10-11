@@ -1,5 +1,8 @@
-/* eslint-disable import/prefer-default-export */
+import { createSelector } from '@reduxjs/toolkit';
+
+import selectCourseTabs from '../../components/NavigationBar/data/selectors';
 import { PostsStatusFilter, ThreadType } from '../../data/constants';
+import { isCourseStatusValid } from '../utils';
 
 export const selectAnonymousPostingConfig = state => ({
   allowAnonymous: state.config.allowAnonymous,
@@ -12,22 +15,25 @@ export const selectUserIsStaff = state => state.config.isUserAdmin;
 
 export const selectUserIsGroupTa = state => state.config.isGroupTa;
 
-export const selectconfigLoadingStatus = state => state.config.status;
-
-export const selectLearnersTabEnabled = state => state.config.learnersTabEnabled;
+export const selectConfigLoadingStatus = state => state.config.status;
 
 export const selectUserRoles = state => state.config.userRoles;
 
 export const selectDivisionSettings = state => state.config.settings;
 
-export const selectBlackoutDate = state => state.config.blackouts;
-
 export const selectGroupAtSubsection = state => state.config.groupAtSubsection;
+
+export const selectIsCourseAdmin = state => state.config.isCourseAdmin;
+
+export const selectIsCourseStaff = state => state.config.isCourseStaff;
+
+export const selectEnableInContext = state => state.config.enableInContext;
+
+export const selectIsPostingEnabled = state => state.config.isPostingEnabled;
 
 export const selectModerationSettings = state => ({
   postCloseReasons: state.config.postCloseReasons,
   editReasons: state.config.editReasons,
-  reasonCodesEnabled: state.config.reasonCodesEnabled,
 });
 
 export const selectDiscussionProvider = state => state.config.provider;
@@ -47,7 +53,7 @@ export function selectAreThreadsFiltered(state) {
 
 export function selectTopicThreadCount(topicId) {
   return state => {
-    const topic = state.topics.topics[topicId];
+    const topic = topicId && state.topics?.topics[topicId];
     if (!topic) {
       return 0;
     }
@@ -58,3 +64,29 @@ export function selectTopicThreadCount(topicId) {
 export function selectPostThreadCount(state) {
   return state.threads.totalThreads;
 }
+
+export const selectIsUserLearner = createSelector(
+  selectUserHasModerationPrivileges,
+  selectUserIsGroupTa,
+  selectUserIsStaff,
+  selectIsCourseAdmin,
+  selectIsCourseStaff,
+  selectCourseTabs,
+  (
+    userHasModerationPrivileges,
+    userIsGroupTa,
+    userIsStaff,
+    userIsCourseAdmin,
+    userIsCourseStaff,
+    { courseStatus },
+  ) => (
+    (
+      !userHasModerationPrivileges
+      && !userIsGroupTa
+      && !userIsStaff
+      && !userIsCourseAdmin
+      && !userIsCourseStaff
+      && isCourseStatusValid(courseStatus)
+    ) || false
+  ),
+);

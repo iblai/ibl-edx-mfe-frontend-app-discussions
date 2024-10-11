@@ -7,11 +7,11 @@ import { AppProvider } from '@edx/frontend-platform/react';
 
 import { ThreadType } from '../../data/constants';
 import { initializeStore } from '../../store';
-import messages from '../comments/messages';
+import messages from '../post-comments/messages';
 import AlertBanner from './AlertBanner';
-import { DiscussionContext } from './context';
+import DiscussionContext from './context';
 
-import '../comments/data/__factories__';
+import '../post-comments/data/__factories__';
 import '../posts/data/__factories__';
 
 let store;
@@ -31,7 +31,14 @@ function renderComponent(
           value={{ courseId: 'course-v1:edX+TestX+Test_Course' }}
         >
           <AlertBanner
-            content={content}
+            author={content.author}
+            abuseFlagged={content.abuseFlagged}
+            lastEdit={content.lastEdit}
+            closed={content.closed}
+            closedBy={content.closedBy}
+            closeReason={content.closeReason}
+            editByLabel={content.editByLabel}
+            closedByLabel={content.closedByLabel}
           />
         </DiscussionContext.Provider>
       </AppProvider>
@@ -83,7 +90,6 @@ describe.each([
     store = initializeStore({
       config: {
         hasModerationPrivileges: true,
-        reasonCodesEnabled: true,
       },
     });
     const content = buildTestContent(type, props);

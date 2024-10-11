@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 
+import { Collapsible, Form, Icon } from '@openedx/paragon';
+import { Check, Tune } from '@openedx/paragon/icons';
 import classNames from 'classnames';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import { Collapsible, Form, Icon } from '@edx/paragon';
-import { Check, Tune } from '@edx/paragon/icons';
+import { sendTrackEvent } from '@edx/frontend-platform/analytics';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
 import { LearnersOrdering } from '../../../data/constants';
 import { selectUserHasModerationPrivileges, selectUserIsGroupTa } from '../../data/selectors';
@@ -14,7 +15,7 @@ import { setSortedBy } from '../data';
 import { selectLearnerSorting } from '../data/selectors';
 import messages from '../messages';
 
-const ActionItem = ({
+const ActionItem = React.memo(({
   id,
   label,
   value,
@@ -23,9 +24,11 @@ const ActionItem = ({
   <label
     htmlFor={id}
     className="focus border-bottom-0 d-flex align-items-center w-100 py-2 m-0 font-weight-500 filter-menu"
-    data-testid={value === selected ? 'selected' : null}
+    data-testid={value === selected ? `${value} selected` : null}
     style={{ cursor: 'pointer' }}
     aria-checked={value === selected}
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+    tabIndex={value === selected ? '0' : '-1'}
   >
     <Icon src={Check} className={classNames('text-success mr-2', { invisible: value !== selected })} />
     <Form.Radio id={id} className="sr-only sr-only-focusable" value={value} tabIndex="0">
@@ -35,7 +38,7 @@ const ActionItem = ({
       {label}
     </span>
   </label>
-);
+));
 
 ActionItem.propTypes = {
   id: PropTypes.string.isRequired,
@@ -44,27 +47,33 @@ ActionItem.propTypes = {
   selected: PropTypes.string.isRequired,
 };
 
-function LearnerFilterBar({
-  intl,
-}) {
+const LearnerFilterBar = () => {
+  const intl = useIntl();
   const dispatch = useDispatch();
   const userHasModerationPrivileges = useSelector(selectUserHasModerationPrivileges);
   const userIsGroupTa = useSelector(selectUserIsGroupTa);
   const currentSorting = useSelector(selectLearnerSorting());
   const [isOpen, setOpen] = useState(false);
 
-  const handleSortFilterChange = (event) => {
+  const handleSortFilterChange = useCallback((event) => {
     const { name, value } = event.currentTarget;
 
     if (name === 'sort') {
       dispatch(setSortedBy(value));
+      sendTrackEvent(
+        'edx.forum.sort.user',
+        {
+          sort: value,
+        },
+      );
     }
-  };
+    setOpen(false);
+  }, []);
 
   return (
     <Collapsible.Advanced
       open={isOpen}
-      onToggle={() => setOpen(!isOpen)}
+      onToggle={setOpen}
       className="filter-bar collapsible-card-lg border-0"
     >
       <Collapsible.Trigger className="collapsible-trigger border-0">
@@ -115,10 +124,6 @@ function LearnerFilterBar({
       </Collapsible.Body>
     </Collapsible.Advanced>
   );
-}
-
-LearnerFilterBar.propTypes = {
-  intl: intlShape.isRequired,
 };
 
-export default injectIntl(LearnerFilterBar);
+export default LearnerFilterBar;

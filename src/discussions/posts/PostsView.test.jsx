@@ -5,54 +5,58 @@ import MockAdapter from 'axios-mock-adapter';
 import { act } from 'react-dom/test-utils';
 import { IntlProvider } from 'react-intl';
 import {
-  generatePath, MemoryRouter, Route, Switch,
-} from 'react-router';
+  generatePath, MemoryRouter, Route, Routes,
+} from 'react-router-dom';
 import { Factory } from 'rosie';
 
 import { initializeMockApp } from '@edx/frontend-platform';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { AppProvider } from '@edx/frontend-platform/react';
 
-import { Routes, ThreadType } from '../../data/constants';
+import { getApiBaseUrl, Routes as ROUTES, ThreadType } from '../../data/constants';
 import { initializeStore } from '../../store';
+import executeThunk from '../../test-utils';
 import { getCohortsApiUrl } from '../cohorts/data/api';
-import { DiscussionContext } from '../common/context';
+import DiscussionContext from '../common/context';
 import { fetchConfigSuccess } from '../data/slices';
 import { getCoursesApiUrl } from '../learners/data/api';
+import fetchCourseTopics from '../topics/data/thunks';
 import { getThreadsApiUrl } from './data/api';
 import { PostsView } from './index';
 
 import './data/__factories__';
 import '../cohorts/data/__factories__';
+import '../topics/data/__factories__';
 
 const courseId = 'course-v1:edX+TestX+Test_Course';
 const coursesApiUrl = getCoursesApiUrl();
 const threadsApiUrl = getThreadsApiUrl();
+const topicsApiUrl = `${getApiBaseUrl()}/api/discussion/v1/course_topics/${courseId}`;
 let store;
 let axiosMock;
 const username = 'abc123';
 
 async function renderComponent({
-  postId, topicId, category, myPosts, inContext = false,
+  postId, topicId, category, myPosts, enableInContextSidebar = false,
 } = { myPosts: false }) {
-  let path = generatePath(Routes.POSTS.ALL_POSTS, { courseId });
-  let page;
+  let path = generatePath(ROUTES.POSTS.ALL_POSTS, { courseId });
+  let page = 'posts';
   if (postId) {
-    path = generatePath(Routes.POSTS.ALL_POSTS, { courseId, postId });
+    path = generatePath(ROUTES.POSTS.ALL_POSTS, { courseId, postId });
     page = 'posts';
   } else if (topicId) {
-    path = generatePath(Routes.POSTS.PATH, { courseId, topicId });
-    page = 'posts';
+    path = generatePath(ROUTES.POSTS.PATH, { courseId, topicId });
+    page = 'topics';
   } else if (category) {
-    path = generatePath(Routes.TOPICS.CATEGORY, { courseId, category });
+    path = generatePath(ROUTES.TOPICS.CATEGORY, { courseId, category });
     page = 'category';
   } else if (myPosts) {
-    path = generatePath(Routes.POSTS.MY_POSTS, { courseId });
+    path = generatePath(ROUTES.POSTS.MY_POSTS, { courseId });
     page = 'my-posts';
   }
   await render(
     <IntlProvider locale="en">
-      <AppProvider store={store}>
+      <AppProvider store={store} wrapWithRouter={false}>
         <MemoryRouter initialEntries={[path]}>
           <DiscussionContext.Provider value={{
             courseId,
@@ -60,18 +64,21 @@ async function renderComponent({
             topicId,
             category,
             page,
-            inContext,
+            enableInContextSidebar,
           }}
           >
-            <Switch>
-              <Route path={Routes.POSTS.MY_POSTS}>
-                <PostsView />
-              </Route>
-              <Route
-                path={[Routes.POSTS.PATH, Routes.POSTS.ALL_POSTS, Routes.TOPICS.CATEGORY]}
-                component={PostsView}
-              />
-            </Switch>
+            <Routes>
+              {
+                [
+                  ROUTES.POSTS.PATH,
+                  ROUTES.POSTS.MY_POSTS,
+                  ROUTES.POSTS.ALL_POSTS,
+                  ROUTES.TOPICS.CATEGORY,
+                ].map((route) => (
+                  <Route key={route} path={route} element={<PostsView />} />
+                ))
+              }
+            </Routes>
           </DiscussionContext.Provider>
         </MemoryRouter>
       </AppProvider>
@@ -106,6 +113,12 @@ describe('PostsView', () => {
           pageSize: 6,
         })];
       });
+    axiosMock
+      .onGet(topicsApiUrl)
+      .reply(200, {
+        courseware_topics: Factory.buildList('category', 2),
+        non_courseware_topics: Factory.buildList('topic', 3, {}, { topicPrefix: 'ncw' }),
+      });
   });
 
   function setupStore(data = {}) {
@@ -114,7 +127,6 @@ describe('PostsView', () => {
       config: { hasModerationPrivileges: true },
       ...data,
     };
-    // console.log(storeData);
     store = initializeStore(storeData);
     store.dispatch(fetchConfigSuccess({}));
   }
@@ -151,9 +163,9 @@ describe('PostsView', () => {
     test('displays a list of posts in a topic', async () => {
       setupStore();
       await act(async () => {
-        await renderComponent({ topicId: 'some-topic-1' });
+        await renderComponent({ topicId: 'test-topic-1' });
       });
-      expect(screen.getAllByText(/this is thread-\d+ in topic some-topic-1/i)).toHaveLength(Math.ceil(threadCount / 3));
+      expect(screen.getAllByText(/this is thread-\d+ in topic test-topic-1/i)).toHaveLength(Math.ceil(threadCount / 3));
     });
 
     test.each([true, false])(
@@ -164,25 +176,25 @@ describe('PostsView', () => {
             blocks: {
               'test-usage-key': {
                 type: 'vertical',
-                topics: ['some-topic-2', 'some-topic-0'],
+                topics: ['test-topic-2', 'test-topic-0'],
                 parent: 'test-seq-key',
               },
-              'test-seq-key': { type: 'sequential', topics: ['some-topic-0', 'some-topic-1', 'some-topic-2'] },
+              'test-seq-key': { type: 'sequential', topics: ['test-topic-0', 'test-topic-1', 'test-topic-2'] },
             },
           },
           config: { groupAtSubsection: grouping, hasModerationPrivileges: true, provider: 'openedx' },
         });
         await act(async () => {
-          await renderComponent({ category: 'test-usage-key', inContext: true, p: true });
+          await renderComponent({ category: 'test-usage-key', enableInContextSidebar: true, p: true });
         });
         const topicThreadCount = Math.ceil(threadCount / 3);
-        expect(screen.queryAllByText(/this is thread-\d+ in topic some-topic-2/i))
+        expect(screen.queryAllByText(/this is thread-\d+ in topic test-topic-2/i))
           .toHaveLength(topicThreadCount);
-        expect(screen.queryAllByText(/this is thread-\d+ in topic some-topic-0/i))
+        expect(screen.queryAllByText(/this is thread-\d+ in topic test-topic-0/i))
           .toHaveLength(topicThreadCount);
         // When grouping is enabled, topic 1 will be shown, but not otherwise.
-        expect(screen.queryAllByText(/this is thread-\d+ in topic some-topic-1/i))
-          .toHaveLength(grouping ? topicThreadCount : 0);
+        expect(screen.queryAllByText(/this is thread-\d+ in topic test-topic-1/i))
+          .toHaveLength(grouping ? topicThreadCount : 2);
       },
     );
   });
@@ -197,6 +209,8 @@ describe('PostsView', () => {
 
     beforeEach(async () => {
       setupStore();
+      await executeThunk(fetchCourseTopics(courseId), store.dispatch, store.getState);
+
       await act(async () => {
         await renderComponent();
       });

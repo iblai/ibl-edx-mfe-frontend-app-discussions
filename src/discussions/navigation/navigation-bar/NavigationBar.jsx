@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { useContext, useMemo } from 'react';
 
-import { matchPath, useParams } from 'react-router';
-import { NavLink } from 'react-router-dom';
+import { Nav } from '@openedx/paragon';
+import { matchPath, NavLink, useLocation } from 'react-router-dom';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import { Nav } from '@edx/paragon';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
 import { Routes } from '../../../data/constants';
-import { useShowLearnersTab } from '../../data/hooks';
+import DiscussionContext from '../../common/context';
 import { discussionsPath } from '../../utils';
 import messages from './messages';
 
-function NavigationBar({ intl }) {
-  const { courseId } = useParams();
-  const showLearnersTab = useShowLearnersTab();
+const NavigationBar = () => {
+  const intl = useIntl();
+  const { courseId } = useContext(DiscussionContext);
+  const location = useLocation();
+  const isTopicsNavActive = Boolean(matchPath({ path: `${Routes.TOPICS.CATEGORY}/*` }, location.pathname));
 
-  const navLinks = [
+  const navLinks = useMemo(() => ([
     {
       route: Routes.POSTS.MY_POSTS,
       labelMessage: messages.myPosts,
@@ -26,26 +27,24 @@ function NavigationBar({ intl }) {
     },
     {
       route: Routes.TOPICS.ALL,
-      isActive: (match, location) => Boolean(matchPath(location.pathname, { path: Routes.TOPICS.PATH })),
       labelMessage: messages.allTopics,
     },
-  ];
-  if (showLearnersTab) {
-    navLinks.push({
+    {
       route: Routes.LEARNERS.PATH,
       labelMessage: messages.learners,
-    });
-  }
+    },
+
+  ]), []);
 
   return (
-    <Nav variant="pills" className="py-2">
+    <Nav variant="pills" className="py-2 nav-button-group">
       {navLinks.map(link => (
         <Nav.Item key={link.route}>
           <Nav.Link
+            key={link.route}
             as={NavLink}
-            to={discussionsPath(link.route, { courseId })}
-            className="border"
-            isActive={link.isActive}
+            to={discussionsPath(link.route, { courseId })()}
+            className={isTopicsNavActive && link.route === Routes.TOPICS.ALL && 'active'}
           >
             {intl.formatMessage(link.labelMessage)}
           </Nav.Link>
@@ -53,10 +52,6 @@ function NavigationBar({ intl }) {
       ))}
     </Nav>
   );
-}
-
-NavigationBar.propTypes = {
-  intl: intlShape.isRequired,
 };
 
-export default injectIntl(NavigationBar);
+export default React.memo(NavigationBar);

@@ -1,6 +1,6 @@
-/* eslint-disable import/prefer-default-export, no-unused-expressions */
 import { logError } from '@edx/frontend-platform/logging';
 
+import { getHttpErrorStatus } from '../../../discussions/utils';
 import { getCourseHomeCourseMetadata } from './api';
 import {
   fetchTabDenied,
@@ -9,11 +9,11 @@ import {
   fetchTabSuccess,
 } from './slice';
 
-export function fetchTab(courseId, rootSlug) {
+export default function fetchTab(courseId) {
   return async (dispatch) => {
     dispatch(fetchTabRequest({ courseId }));
     try {
-      const courseHomeCourseMetadata = await getCourseHomeCourseMetadata(courseId, rootSlug);
+      const courseHomeCourseMetadata = await getCourseHomeCourseMetadata(courseId);
       if (!courseHomeCourseMetadata.courseAccess.hasAccess) {
         dispatch(fetchTabDenied({ courseId }));
       } else {
@@ -23,10 +23,15 @@ export function fetchTab(courseId, rootSlug) {
           org: courseHomeCourseMetadata.org,
           courseNumber: courseHomeCourseMetadata.number,
           courseTitle: courseHomeCourseMetadata.title,
+          isEnrolled: courseHomeCourseMetadata.isEnrolled,
         }));
       }
     } catch (e) {
-      dispatch(fetchTabFailure({ courseId }));
+      if (getHttpErrorStatus(e) === 403) {
+        dispatch(fetchTabDenied({ courseId }));
+      } else {
+        dispatch(fetchTabFailure({ courseId }));
+      }
       logError(e);
     }
   };

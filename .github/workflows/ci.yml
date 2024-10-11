@@ -9,18 +9,16 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [16]
+
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Setup Nodejs
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node }}
+        node-version-file: '.nvmrc'
     - name: Install dependencies
       run: npm ci
     - name: Validate package-lock.json changes
@@ -34,4 +32,7 @@ jobs:
     - name: i18n_extract
       run: npm run i18n_extract
     - name: Coverage
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true

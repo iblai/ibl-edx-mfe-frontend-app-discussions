@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import { useState } from 'react';
 
 import { useDispatch } from 'react-redux';
@@ -15,14 +14,16 @@ import { useDispatch } from 'react-redux';
  *
  * @return {(boolean|(function(*=): Promise<void>)|*)[]}
  */
-export function useDispatchWithState() {
+export default function useDispatchWithState() {
   const dispatch = useDispatch();
   const [isDispatching, setDispatching] = useState(false);
+
   const dispatchWithState = async (thunk) => {
     setDispatching(true);
     await dispatch(thunk);
     setDispatching(false);
   };
+
   return [
     isDispatching,
     dispatchWithState,

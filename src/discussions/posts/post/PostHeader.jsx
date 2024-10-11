@@ -1,76 +1,73 @@
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 
+import { Avatar, Badge, Icon } from '@openedx/paragon';
+import { Question } from '@openedx/paragon/icons';
 import classNames from 'classnames';
-import { useSelector } from 'react-redux';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import { Avatar, Badge, Icon } from '@edx/paragon';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
-import { Issue, Question } from '../../../components/icons';
 import { AvatarOutlineAndLabelColors, ThreadType } from '../../../data/constants';
-import { ActionsDropdown, AuthorLabel } from '../../common';
+import { AuthorLabel } from '../../common';
 import { useAlertBannerVisible } from '../../data/hooks';
-import { selectAuthorAvatars } from '../data/selectors';
 import messages from './messages';
-import { postShape } from './proptypes';
 
-export function PostAvatar({
-  post, authorLabel, fromPostLink, read,
-}) {
-  const authorAvatars = useSelector(selectAuthorAvatars(post.author));
+export const PostAvatar = React.memo(({
+  author, postType, authorLabel, fromPostLink, read,
+}) => {
   const outlineColor = AvatarOutlineAndLabelColors[authorLabel];
 
   const avatarSize = useMemo(() => {
-    let size = '1.75rem';
-    if (post.type === ThreadType.DISCUSSION && !fromPostLink) {
-      size = '2.375rem';
-    } else if (post.type === ThreadType.QUESTION) {
-      size = '1.375rem';
+    let size = '2rem';
+    if (postType === ThreadType.DISCUSSION && !fromPostLink) {
+      size = '2rem';
+    } else if (postType === ThreadType.QUESTION) {
+      size = '1.5rem';
     }
     return size;
-  }, [post.type]);
+  }, [postType]);
 
   const avatarSpacing = useMemo(() => {
     let spacing = 'mr-3 ';
-    if (post.type === ThreadType.DISCUSSION && fromPostLink) {
+    if (postType === ThreadType.DISCUSSION && fromPostLink) {
       spacing += 'pt-2 ml-0.5';
-    } else if (post.type === ThreadType.DISCUSSION) {
+    } else if (postType === ThreadType.DISCUSSION) {
       spacing += 'ml-0.5 mt-0.5';
     }
     return spacing;
-  }, [post.type]);
+  }, [postType]);
 
   return (
     <div className={avatarSpacing}>
-      {post.type === ThreadType.QUESTION && (
+      {postType === ThreadType.QUESTION && (
         <Icon
-          src={read ? Issue : Question}
-          className={classNames('position-absolute bg-white rounded-circle question-icon-size', {
-            'question-icon-position': fromPostLink,
+          src={Question}
+          className={classNames('position-absolute rounded-circle question-icon-size', {
+            'question-icon-position': fromPostLink, 'bg-white': !read, 'bg-light-300': read,
           })}
         />
       )}
       <Avatar
-        className={classNames('border-0', {
+        className={classNames('border-0 mt-1', {
           [`outline-${outlineColor}`]: outlineColor,
           'outline-anonymous': !outlineColor,
-          'mt-3 ml-2': post.type === ThreadType.QUESTION && fromPostLink,
-          'avarat-img-position': post.type === ThreadType.QUESTION,
+          'mt-3 ml-2': postType === ThreadType.QUESTION && fromPostLink,
+          'mt-2.5': postType === ThreadType.QUESTION && !fromPostLink,
+          'avarat-img-position mt-17px': postType === ThreadType.QUESTION,
         })}
         style={{
           height: avatarSize,
           width: avatarSize,
         }}
-        alt={post.author}
-        src={authorAvatars?.imageUrlSmall}
+        alt={author}
       />
     </div>
   );
-}
+});
 
 PostAvatar.propTypes = {
-  post: postShape.isRequired,
+  author: PropTypes.string.isRequired,
+  postType: PropTypes.string.isRequired,
   authorLabel: PropTypes.string,
   fromPostLink: PropTypes.bool,
   read: PropTypes.bool,
@@ -82,61 +79,86 @@ PostAvatar.defaultProps = {
   read: false,
 };
 
-function PostHeader({
-  intl,
-  post,
+const PostHeader = ({
+  abuseFlagged,
+  author,
+  authorLabel,
+  closed,
+  createdAt,
+  hasEndorsed,
+  lastEdit,
+  title,
+  postType,
   preview,
-  actionHandlers,
-}) {
-  const showAnsweredBadge = preview && post.hasEndorsed && post.type === ThreadType.QUESTION;
-  const authorLabelColor = AvatarOutlineAndLabelColors[post.authorLabel];
-  const hasAnyAlert = useAlertBannerVisible(post);
+}) => {
+  const intl = useIntl();
+  const showAnsweredBadge = preview && hasEndorsed && postType === ThreadType.QUESTION;
+  const authorLabelColor = AvatarOutlineAndLabelColors[authorLabel];
+  const hasAnyAlert = useAlertBannerVisible({
+    author, abuseFlagged, lastEdit, closed,
+  });
 
   return (
-    <div className={classNames('d-flex flex-fill mw-100', { 'mt-2': hasAnyAlert && !preview })}>
+    <div className={classNames('d-flex flex-fill mw-100', { 'mt-10px': hasAnyAlert && !preview })}>
       <div className="flex-shrink-0">
-        <PostAvatar post={post} authorLabel={post.authorLabel} />
+        <PostAvatar postType={postType} author={author} authorLabel={authorLabel} />
       </div>
       <div className="align-items-center d-flex flex-row">
         <div className="d-flex flex-column justify-content-start mw-100">
-          {preview
-            ? (
-              <div className="h4 d-flex align-items-center pb-0 mb-0 flex-fill">
-                <div className="flex-fill text-truncate" role="heading" aria-level="1">
-                  {post.title}
-                </div>
-                {showAnsweredBadge
-                  && <Badge variant="success">{intl.formatMessage(messages.answered)}</Badge>}
+          {preview ? (
+            <div className="h4 d-flex align-items-center pb-0 mb-0 flex-fill">
+              <div className="flex-fill text-truncate" role="heading" aria-level="1">
+                {title}
               </div>
-            )
-            : <h4 className="mb-0" style={{ lineHeight: '28px' }} aria-level="1" tabIndex="-1" accessKey="h">{post.title}</h4>}
+              {showAnsweredBadge
+                  && <Badge variant="success">{intl.formatMessage(messages.answered)}</Badge>}
+            </div>
+          ) : (
+            <h5
+              className="mb-0 font-style text-primary-500"
+              style={{ lineHeight: '21px' }}
+              aria-level="1"
+              tabIndex="-1"
+              accessKey="h"
+            >
+              {title}
+            </h5>
+          )}
           <AuthorLabel
-            author={post.author || intl.formatMessage(messages.anonymous)}
-            authorLabel={post.authorLabel}
+            author={author || intl.formatMessage(messages.anonymous)}
+            authorLabel={authorLabel}
             labelColor={authorLabelColor && `text-${authorLabelColor}`}
             linkToProfile
+            postCreatedAt={createdAt}
+            postOrComment
           />
         </div>
       </div>
-      {!preview
-        && (
-          <div className="ml-auto d-flex">
-            <ActionsDropdown commentOrPost={post} actionHandlers={actionHandlers} />
-          </div>
-        )}
     </div>
   );
-}
+};
 
 PostHeader.propTypes = {
-  intl: intlShape.isRequired,
-  post: postShape.isRequired,
   preview: PropTypes.bool,
-  actionHandlers: PropTypes.objectOf(PropTypes.func).isRequired,
+  hasEndorsed: PropTypes.bool.isRequired,
+  postType: PropTypes.string.isRequired,
+  authorLabel: PropTypes.string,
+  author: PropTypes.string.isRequired,
+  title: PropTypes.string.isRequired,
+  createdAt: PropTypes.string.isRequired,
+  abuseFlagged: PropTypes.bool,
+  lastEdit: PropTypes.shape({
+    reason: PropTypes.string,
+  }),
+  closed: PropTypes.bool,
 };
 
 PostHeader.defaultProps = {
+  authorLabel: null,
   preview: false,
+  abuseFlagged: false,
+  lastEdit: {},
+  closed: false,
 };
 
-export default injectIntl(PostHeader);
+export default React.memo(PostHeader);

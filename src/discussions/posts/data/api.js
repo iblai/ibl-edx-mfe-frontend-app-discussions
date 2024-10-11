@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import snakeCase from 'lodash.snakecase';
 
 import { ensureConfig, getConfig, snakeCaseObject } from '@edx/frontend-platform';
@@ -28,22 +27,20 @@ export const getCoursesApiUrl = () => `${getConfig().LMS_BASE_URL}/api/discussio
  * @param {number} cohort
  * @returns {Promise<{}>}
  */
-export async function getThreads(
-  courseId, {
-    topicIds,
-    page,
-    pageSize,
-    textSearch,
-    orderBy,
-    following,
-    view,
-    author,
-    flagged,
-    threadType,
-    countFlagged,
-    cohort,
-  } = {},
-) {
+export const getThreads = async (courseId, {
+  topicIds,
+  page,
+  pageSize,
+  textSearch,
+  orderBy,
+  following,
+  view,
+  author,
+  flagged,
+  threadType,
+  countFlagged,
+  cohort,
+} = {}) => {
   const params = snakeCaseObject({
     courseId,
     page,
@@ -62,19 +59,19 @@ export async function getThreads(
   });
   const { data } = await getAuthenticatedHttpClient().get(getThreadsApiUrl(), { params });
   return data;
-}
+};
 
 /**
  * Fetches a single thread.
  * @param {string} threadId
  * @returns {Promise<{}>}
  */
-export async function getThread(threadId, courseId) {
+export const getThread = async (threadId, courseId) => {
   const params = { requested_fields: 'profile_image', course_id: courseId };
   const url = `${getThreadsApiUrl()}${threadId}/`;
   const { data } = await getAuthenticatedHttpClient().get(url, { params });
   return data;
-}
+};
 
 /**
  * Posts a new thread.
@@ -87,9 +84,10 @@ export async function getThread(threadId, courseId) {
  * @param {boolean} following Follow the thread after creating
  * @param {boolean} anonymous Should the thread be anonymous to all users
  * @param {boolean} anonymousToPeers Should the thread be anonymous to peers
+ * @param {boolean} enableInContextSidebar
  * @returns {Promise<{}>}
  */
-export async function postThread(
+export const postThread = async (
   courseId,
   topicId,
   type,
@@ -101,7 +99,8 @@ export async function postThread(
     anonymous,
     anonymousToPeers,
   } = {},
-) {
+  enableInContextSidebar = false,
+) => {
   const postData = snakeCaseObject({
     courseId,
     topicId,
@@ -112,12 +111,12 @@ export async function postThread(
     anonymous,
     anonymousToPeers,
     groupId: cohort,
+    enableInContextSidebar,
   });
-
   const { data } = await getAuthenticatedHttpClient()
     .post(getThreadsApiUrl(), postData);
   return data;
-}
+};
 
 /**
  * Updates an existing thread.
@@ -136,7 +135,7 @@ export async function postThread(
  * @param {string} closeReasonCode
  * @returns {Promise<{}>}
  */
-export async function updateThread(threadId, {
+export const updateThread = async (threadId, {
   flagged,
   voted,
   read,
@@ -149,7 +148,7 @@ export async function updateThread(threadId, {
   pinned,
   editReasonCode,
   closeReasonCode,
-} = {}) {
+} = {}) => {
   const url = `${getThreadsApiUrl()}${threadId}/`;
   const patchData = snakeCaseObject({
     topicId,
@@ -168,17 +167,17 @@ export async function updateThread(threadId, {
   const { data } = await getAuthenticatedHttpClient()
     .patch(url, patchData, { headers: { 'Content-Type': 'application/merge-patch+json' } });
   return data;
-}
+};
 
 /**
  * Deletes a thread.
  * @param {string} threadId
  */
-export async function deleteThread(threadId) {
+export const deleteThread = async (threadId) => {
   const url = `${getThreadsApiUrl()}${threadId}/`;
   await getAuthenticatedHttpClient()
     .delete(url);
-}
+};
 
 /**
  * Upload a file.
@@ -188,7 +187,7 @@ export async function deleteThread(threadId) {
  * @param {string} threadKey
  * @returns {Promise<{ location: string }>}
  */
-export async function uploadFile(blob, filename, courseId, threadKey) {
+export const uploadFile = async (blob, filename, courseId, threadKey) => {
   const uploadUrl = `${getCoursesApiUrl()}${courseId}/upload`;
   const formData = new FormData();
   formData.append('thread_key', threadKey);
@@ -198,4 +197,4 @@ export async function uploadFile(blob, filename, courseId, threadKey) {
     throw new Error(data.developer_message);
   }
   return data;
-}
+};

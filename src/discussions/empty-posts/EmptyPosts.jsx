@@ -1,26 +1,27 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import propTypes from 'prop-types';
 
 import { useDispatch, useSelector } from 'react-redux';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
-import { useIsOnDesktop } from '../data/hooks';
+import { useIsOnTablet } from '../data/hooks';
 import { selectAreThreadsFiltered, selectPostThreadCount } from '../data/selectors';
 import messages from '../messages';
-import { messages as postMessages, showPostEditor } from '../posts';
+import { showPostEditor } from '../posts/data';
+import postMessages from '../posts/post-actions-bar/messages';
 import EmptyPage from './EmptyPage';
 
-function EmptyPosts({ intl, subTitleMessage }) {
+const EmptyPosts = ({ subTitleMessage }) => {
+  const intl = useIntl();
   const dispatch = useDispatch();
-
+  const isOnTabletorDesktop = useIsOnTablet();
   const isFiltered = useSelector(selectAreThreadsFiltered);
   const totalThreads = useSelector(selectPostThreadCount);
-  const isOnDesktop = useIsOnDesktop();
 
-  function addPost() {
-    return dispatch(showPostEditor());
-  }
+  const addPost = useCallback(() => (
+    dispatch(showPostEditor())
+  ), []);
 
   let title = messages.noPostSelected;
   let subTitle = null;
@@ -30,7 +31,7 @@ function EmptyPosts({ intl, subTitleMessage }) {
 
   const isEmpty = [0, null].includes(totalThreads) && !isFiltered;
 
-  if (!(isOnDesktop || isEmpty)) {
+  if (!(isOnTabletorDesktop || isEmpty)) {
     return null;
   } if (isEmpty) {
     subTitle = subTitleMessage;
@@ -49,11 +50,14 @@ function EmptyPosts({ intl, subTitleMessage }) {
       fullWidth={fullWidth}
     />
   );
-}
-
-EmptyPosts.propTypes = {
-  subTitleMessage: propTypes.string.isRequired,
-  intl: intlShape.isRequired,
 };
 
-export default injectIntl(EmptyPosts);
+EmptyPosts.propTypes = {
+  subTitleMessage: propTypes.shape({
+    id: propTypes.string,
+    defaultMessage: propTypes.string,
+    description: propTypes.string,
+  }).isRequired,
+};
+
+export default React.memo(EmptyPosts);

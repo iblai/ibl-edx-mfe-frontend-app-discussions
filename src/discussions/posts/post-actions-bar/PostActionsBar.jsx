@@ -1,75 +1,86 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { useCallback, useContext } from 'react';
 
+import {
+  Button, Icon, IconButton,
+} from '@openedx/paragon';
+import { Close } from '@openedx/paragon/icons';
 import classNames from 'classnames';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import {
-  Button, Icon, IconButton,
-} from '@edx/paragon';
-import { Close } from '@edx/paragon/icons';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
 import Search from '../../../components/Search';
 import { RequestStatus } from '../../../data/constants';
-import { selectBlackoutDate, selectconfigLoadingStatus } from '../../data/selectors';
-import { inBlackoutDateRange, postMessageToParent } from '../../utils';
+import DiscussionContext from '../../common/context';
+import { useUserPostingEnabled } from '../../data/hooks';
+import { selectConfigLoadingStatus, selectEnableInContext } from '../../data/selectors';
+import { TopicSearchBar as IncontextSearch } from '../../in-context-topics/topic-search';
+import { postMessageToParent } from '../../utils';
 import { showPostEditor } from '../data';
 import messages from './messages';
 
 import './actionBar.scss';
 
-function PostActionsBar({
-  intl,
-  inContext,
-}) {
+const PostActionsBar = () => {
+  const intl = useIntl();
   const dispatch = useDispatch();
-  const loadingStatus = useSelector(selectconfigLoadingStatus);
-  const blackoutDateRange = useSelector(selectBlackoutDate);
+  const loadingStatus = useSelector(selectConfigLoadingStatus);
+  const enableInContext = useSelector(selectEnableInContext);
+  const isUserPrivilegedInPostingRestriction = useUserPostingEnabled();
+  const { enableInContextSidebar, page } = useContext(DiscussionContext);
 
-  const handleCloseInContext = () => {
+  const handleCloseInContext = useCallback(() => {
     postMessageToParent('learning.events.sidebar.close');
-  };
+  }, []);
+
+  const handleAddPost = useCallback(() => {
+    dispatch(showPostEditor());
+  }, []);
 
   return (
-    <div className={classNames('d-flex justify-content-end flex-grow-1', { 'py-1': !inContext })}>
-      {!inContext && <Search />}
-      {inContext && (
-        <h4 className="d-flex flex-grow-1 font-weight-bold my-0 py-0 align-self-center">
+    <div className={classNames('d-flex justify-content-end flex-grow-1', { 'py-1': !enableInContextSidebar })}>
+      {!enableInContextSidebar && (
+        (enableInContext && ['topics', 'category'].includes(page))
+          ? <IncontextSearch />
+          : <Search />
+      )}
+      {enableInContextSidebar && (
+        <h4 className="d-flex flex-grow-1 font-weight-bold font-style my-0 py-10px align-self-center">
           {intl.formatMessage(messages.title)}
         </h4>
       )}
-      {(!inBlackoutDateRange(blackoutDateRange) && loadingStatus === RequestStatus.SUCCESSFUL) && (
+      {loadingStatus === RequestStatus.SUCCESSFUL && isUserPrivilegedInPostingRestriction && (
         <>
-          {!inContext && <div className="border-right border-light-400 mx-3" />}
+          {!enableInContextSidebar && <div className="border-right border-light-400 mx-3" />}
           <Button
-            variant={inContext ? 'plain' : 'brand'}
-            className={classNames('my-0', { 'p-0': inContext })}
-            onClick={() => dispatch(showPostEditor())}
-            size={inContext ? 'md' : 'sm'}
+            variant={enableInContextSidebar ? 'plain' : 'brand'}
+            className={classNames(
+              'my-0 font-style border-0 line-height-24',
+              { 'px-3 py-10px border-0': enableInContextSidebar },
+            )}
+            onClick={handleAddPost}
+            size={enableInContextSidebar ? 'md' : 'sm'}
           >
             {intl.formatMessage(messages.addAPost)}
           </Button>
         </>
       )}
-      {inContext && (
+      {enableInContextSidebar && (
         <>
-          <div className="border-right border-light-300 mr-2 ml-3.5 my-2" />
-          <IconButton
-            src={Close}
-            iconAs={Icon}
-            onClick={handleCloseInContext}
-            alt={intl.formatMessage(messages.close)}
-          />
+          <div className="border-right border-light-300 mr-2 my-10px" />
+          <div className="d-flex align-items-center justify-content-center">
+            <IconButton
+              src={Close}
+              size="sm"
+              iconAs={Icon}
+              onClick={handleCloseInContext}
+              alt={intl.formatMessage(messages.close)}
+            />
+          </div>
         </>
       )}
     </div>
   );
-}
-
-PostActionsBar.propTypes = {
-  intl: intlShape.isRequired,
-  inContext: PropTypes.bool.isRequired,
 };
 
-export default injectIntl(PostActionsBar);
+export default PostActionsBar;

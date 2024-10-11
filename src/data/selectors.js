@@ -1,5 +1,3 @@
-/* eslint-disable import/prefer-default-export */
-
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectDiscussionProvider, selectGroupAtSubsection } from '../discussions/data/selectors';
@@ -36,12 +34,6 @@ export const selectTopicsUnderCategory = createSelector(
       ? category => topicsInCategory?.[category]
       : category => blocks[category]?.topics
   ),
-);
-
-export const selectSequences = createSelector(
-  selectChapters,
-  selectBlocks,
-  (chapterIds, blocks) => chapterIds?.flatMap(cId => blocks[cId].children.map(seqId => blocks[seqId])) || [],
 );
 
 export const selectArchivedTopics = createSelector(

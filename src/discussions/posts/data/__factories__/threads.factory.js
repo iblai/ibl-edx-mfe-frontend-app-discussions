@@ -5,9 +5,10 @@ Factory.define('thread')
   .sequence('title', ['topic_id'], (idx, topicId) => `This is Thread-${idx} in topic ${topicId}`)
   .sequence('raw_body', (idx) => `Some contents for **thread number ${idx}**.`)
   .sequence('rendered_body', (idx) => `Some contents for <b>thread number ${idx}</b>.`)
+  .sequence('preview_body', (idx) => `Some contents for <b>thread number ${idx}</b>.`)
   .sequence('type', (idx) => (idx % 2 === 1 ? 'discussion' : 'question'))
   .sequence('pinned', idx => (idx < 3))
-  .sequence('topic_id', idx => `some-topic-${(idx % 3)}`)
+  .sequence('topic_id', idx => `test-topic-${(idx % 3)}`)
   .sequence('closed', idx => Boolean(idx % 3 === 2)) // Mark every 3rd post closed
   .attr('comment_list_url', ['id'], (threadId) => `http://test.site/api/discussion/v1/comments/?thread_id=${threadId}`)
   .attrs({
@@ -25,6 +26,7 @@ Factory.define('thread')
       'type',
       'voted',
       'pinned',
+      'copy_link',
     ],
     author: 'test_user',
     author_label: 'Staff',

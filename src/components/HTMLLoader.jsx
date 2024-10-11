@@ -1,66 +1,66 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
-import MathJax from 'react-mathjax-preview';
+import DOMPurify from 'dompurify';
 
-const baseConfig = {
-  showMathMenu: true,
-  tex2jax: {
-    inlineMath: [
-      ['$', '$'],
-      ['\\\\(', '\\\\)'],
-      ['\\(', '\\)'],
-      ['[mathjaxinline]', '[/mathjaxinline]'],
-      ['\\begin{math}', '\\end{math}'],
-    ],
-    displayMath: [
-      ['[mathjax]', '[/mathjax]'],
-      ['$$', '$$'],
-      ['\\\\[', '\\\\]'],
-      ['\\[', '\\]'],
-      ['\\begin{displaymath}', '\\end{displaymath}'],
-      ['\\begin{equation}', '\\end{equation}'],
-    ],
-  },
+import { logError } from '@edx/frontend-platform/logging';
 
-  skipStartupTypeset: true,
+import { useDebounce } from '../discussions/data/hooks';
+
+const defaultSanitizeOptions = {
+  USE_PROFILES: { html: true },
+  ADD_ATTR: ['columnalign', 'target'],
 };
 
-function HTMLLoader({ htmlNode, componentId, cssClassName }) {
-  const isLatex = htmlNode.match(/(\${1,2})((?:\\.|.)*)\1/)
-                  || htmlNode.match(/(\[mathjax](.+?)\[\/mathjax])+/)
-                  || htmlNode.match(/(\[mathjaxinline](.+?)\[\/mathjaxinline])+/)
-                  || htmlNode.match(/(\\begin\{math}(.+?)\\end\{math})+/)
-                  || htmlNode.match(/(\\begin\{displaymath}(.+?)\\end\{displaymath})+/)
-                  || htmlNode.match(/(\\begin\{equation}(.+?)\\end\{equation})+/)
-                  || htmlNode.match(/(\\\[(.+?)\\\])+/)
-                  || htmlNode.match(/(\\\((.+?)\\\))+/);
+const HTMLLoader = ({
+  htmlNode, componentId, cssClassName, testId, delay,
+}) => {
+  const sanitizedMath = DOMPurify.sanitize(htmlNode, { ...defaultSanitizeOptions });
+  const previewRef = useRef(null);
+  const debouncedPostContent = useDebounce(htmlNode, delay);
+
+  useEffect(() => {
+    let promise = Promise.resolve(); // Used to hold chain of typesetting calls
+
+    function typeset(code) {
+      promise = promise.then(() => {
+        if (typeof window?.MathJax !== 'undefined' && typeof window?.MathJax.startup !== 'undefined') {
+          window.MathJax.startup.defaultPageReady().then((window.MathJax?.typesetPromise(code())));
+        }
+        return null;
+      })
+        .catch((err) => logError(`Typeset failed: ${err.message}`));
+      return promise;
+    }
+
+    if (debouncedPostContent) {
+      typeset(() => {
+        if (previewRef.current !== null && typeof window?.MathJax !== 'undefined') {
+          previewRef.current.innerHTML = sanitizedMath;
+        }
+      });
+    }
+  }, [debouncedPostContent]);
 
   return (
-    isLatex ? (
-      <MathJax
-        math={htmlNode}
-        id={componentId}
-        className={cssClassName}
-        sanitizeOptions={{ USE_PROFILES: { html: true } }}
-        config={baseConfig}
-      />
-    )
-      // eslint-disable-next-line react/no-danger
-      : <div className={cssClassName} id={componentId} dangerouslySetInnerHTML={{ __html: htmlNode }} />
+    <div ref={previewRef} className={cssClassName} id={componentId} data-testid={testId} />
   );
-}
+};
 
 HTMLLoader.propTypes = {
   htmlNode: PropTypes.node,
   componentId: PropTypes.string,
   cssClassName: PropTypes.string,
+  testId: PropTypes.string,
+  delay: PropTypes.number,
 };
 
 HTMLLoader.defaultProps = {
   htmlNode: '',
   componentId: null,
   cssClassName: '',
+  testId: '',
+  delay: 0,
 };
 
-export default HTMLLoader;
+export default React.memo(HTMLLoader);

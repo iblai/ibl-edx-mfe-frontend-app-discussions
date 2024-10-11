@@ -1,108 +1,149 @@
-/* eslint-disable import/prefer-default-export */
 import {
-  useContext, useEffect, useRef, useState,
+  useCallback,
+  useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 
+import { breakpoints, useWindowSize } from '@openedx/paragon';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory, useLocation, useRouteMatch } from 'react-router';
+import {
+  matchPath, useLocation, useMatch, useNavigate,
+} from 'react-router-dom';
 
 import { getAuthenticatedUser } from '@edx/frontend-platform/auth';
+import { useIntl } from '@edx/frontend-platform/i18n';
 import { AppContext } from '@edx/frontend-platform/react';
-import { breakpoints, useWindowSize } from '@edx/paragon';
 
-import { Routes } from '../../data/constants';
+import selectCourseTabs from '../../components/NavigationBar/data/selectors';
+import { LOADED } from '../../components/NavigationBar/data/slice';
+import fetchTab from '../../components/NavigationBar/data/thunks';
+import { ContentActions, RequestStatus, Routes } from '../../data/constants';
 import { selectTopicsUnderCategory } from '../../data/selectors';
-import { fetchCourseBlocks } from '../../data/thunks';
-import { DiscussionContext } from '../common/context';
+import fetchCourseBlocks from '../../data/thunks';
+import DiscussionContext from '../common/context';
+import PostCommentsContext from '../post-comments/postCommentsContext';
 import { clearRedirect } from '../posts/data';
+import { threadsLoadingStatus } from '../posts/data/selectors';
 import { selectTopics } from '../topics/data/selectors';
-import { fetchCourseTopics } from '../topics/data/thunks';
-import { discussionsPath } from '../utils';
+import tourCheckpoints from '../tours/constants';
+import selectTours from '../tours/data/selectors';
+import { updateTourShowStatus } from '../tours/data/thunks';
+import messages from '../tours/messages';
+import { checkPermissions, discussionsPath } from '../utils';
+import { ContentSelectors } from './constants';
 import {
-  selectAreThreadsFiltered, selectLearnersTabEnabled,
-  selectModerationSettings,
+  selectAreThreadsFiltered,
+  selectEnableInContext,
+  selectIsCourseAdmin,
+  selectIsCourseStaff,
+  selectIsPostingEnabled,
+  selectIsUserLearner,
   selectPostThreadCount,
   selectUserHasModerationPrivileges,
   selectUserIsGroupTa,
+  selectUserIsStaff,
 } from './selectors';
-import { fetchCourseConfig } from './thunks';
+import fetchCourseConfig from './thunks';
 
 export function useTotalTopicThreadCount() {
   const topics = useSelector(selectTopics);
+  const count = useMemo(
+    () => (
+      Object.keys(topics)?.reduce((total, topicId) => {
+        const topic = topics[topicId];
+        return total + topic.threadCounts.discussion + topic.threadCounts.question;
+      }, 0)),
+    [],
+  );
 
-  if (!topics) {
-    return 0;
-  }
-
-  return Object.keys(topics).reduce((total, topicId) => {
-    const topic = topics[topicId];
-    return total + topic.threadCounts.discussion + topic.threadCounts.question;
-  }, 0);
+  return count;
 }
 
 export const useSidebarVisible = () => {
+  const location = useLocation();
+  const enableInContext = useSelector(selectEnableInContext);
+  const isViewingTopics = useMatch(Routes.TOPICS.ALL);
+  const isViewingLearners = useMatch(`${Routes.LEARNERS.PATH}/*`);
   const isFiltered = useSelector(selectAreThreadsFiltered);
   const totalThreads = useSelector(selectPostThreadCount);
-  const isViewingTopics = useRouteMatch(Routes.TOPICS.PATH);
-  const isViewingLearners = useRouteMatch(Routes.LEARNERS.PATH);
+  const isThreadsEmpty = Boolean(useSelector(threadsLoadingStatus()) === RequestStatus.SUCCESSFUL && !totalThreads);
+  const matchInContextTopicView = Routes.TOPICS.PATH.find((route) => matchPath({ path: `${route}/*` }, location.pathname));
+  const isInContextTopicsView = Boolean(matchInContextTopicView && enableInContext);
+  const hideSidebar = Boolean(isThreadsEmpty && !isFiltered && !(isViewingTopics || isViewingLearners));
 
-  if (isFiltered) {
+  if (isInContextTopicsView) {
     return true;
   }
 
-  if (isViewingTopics || isViewingLearners) {
-    return true;
-  }
-
-  return totalThreads > 0;
+  return !hideSidebar;
 };
 
 export function useCourseDiscussionData(courseId) {
   const dispatch = useDispatch();
-  const { authenticatedUser } = useContext(AppContext);
 
   useEffect(() => {
     async function fetchBaseData() {
       await dispatch(fetchCourseConfig(courseId));
-      await dispatch(fetchCourseTopics(courseId));
-      await dispatch(fetchCourseBlocks(courseId, authenticatedUser.username));
+      await dispatch(fetchTab(courseId));
     }
 
     fetchBaseData();
   }, [courseId]);
 }
 
-export function useRedirectToThread(courseId, inContext) {
+export function useCourseBlockData(courseId) {
   const dispatch = useDispatch();
+  const { authenticatedUser } = useContext(AppContext);
+  const { isEnrolled, courseStatus } = useSelector(selectCourseTabs);
+  const isUserLearner = useSelector(selectIsUserLearner);
+
+  useEffect(() => {
+    async function fetchBaseData() {
+      if (courseStatus === LOADED && (!isUserLearner || isEnrolled)) {
+        await dispatch(fetchCourseBlocks(courseId, authenticatedUser.username));
+      }
+    }
+
+    fetchBaseData();
+  }, [courseId, isEnrolled, courseStatus, isUserLearner]);
+}
+
+export function useRedirectToThread(courseId, enableInContextSidebar) {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const redirectToThread = useSelector(
     (state) => state.threads.redirectToThread,
   );
-  const history = useHistory();
-  const location = useLocation();
 
-  return useEffect(() => {
+  useEffect(() => {
     // After posting a new thread we'd like to redirect users to it, the topic and post id are temporarily
     // stored in redirectToThread
     if (redirectToThread) {
       dispatch(clearRedirect());
-      const newLocation = discussionsPath(Routes.COMMENTS.PAGES[inContext ? 'topics' : 'my-posts'], {
+      const newLocation = discussionsPath(Routes.COMMENTS.PAGES[enableInContextSidebar ? 'topics' : 'my-posts'], {
         courseId,
         postId: redirectToThread.threadId,
         topicId: redirectToThread.topicId,
       })(location);
-      history.push(newLocation);
+      navigate({ ...newLocation });
     }
   }, [redirectToThread]);
 }
 
 export function useIsOnDesktop() {
   const windowSize = useWindowSize();
-  return windowSize.width >= breakpoints.large.minWidth;
+  return windowSize.width >= breakpoints.medium.maxWidth;
+}
+
+export function useIsOnTablet() {
+  const windowSize = useWindowSize();
+  return windowSize.width >= breakpoints.small.maxWidth;
 }
 
 export function useIsOnXLDesktop() {
   const windowSize = useWindowSize();
-  return windowSize.width >= breakpoints.extraLarge.minWidth;
+  return windowSize.width >= breakpoints.extraLarge.maxWidth;
 }
 
 /**
@@ -115,9 +156,11 @@ export function useContainerSize(refContainer) {
 
   const resizeObserver = useRef(new ResizeObserver(() => {
     /* istanbul ignore if: ResizeObserver isn't available in the testing env */
-    if (refContainer?.current) {
-      setHeight(refContainer?.current?.clientHeight);
-    }
+    window.requestAnimationFrame(() => {
+      if (refContainer?.current) {
+        setHeight(refContainer?.current?.clientHeight);
+      }
+    });
   }));
 
   useEffect(() => {
@@ -138,21 +181,21 @@ export function useContainerSize(refContainer) {
   return height;
 }
 
-export const useAlertBannerVisible = (content) => {
+export const useAlertBannerVisible = (
+  {
+    author, abuseFlagged, lastEdit, closed,
+  } = {},
+) => {
   const userHasModerationPrivileges = useSelector(selectUserHasModerationPrivileges);
   const userIsGroupTa = useSelector(selectUserIsGroupTa);
-  const { reasonCodesEnabled } = useSelector(selectModerationSettings);
-  const userIsContentAuthor = getAuthenticatedUser().username === content.author;
+  const userIsContentAuthor = getAuthenticatedUser().username === author;
   const canSeeLastEditOrClosedAlert = (userHasModerationPrivileges || userIsContentAuthor || userIsGroupTa);
-  const canSeeReportedBanner = content.abuseFlagged;
+  const canSeeReportedBanner = abuseFlagged;
 
   return (
-    (reasonCodesEnabled && canSeeLastEditOrClosedAlert && (content.lastEdit?.reason || content.closed))
-    || (content.abuseFlagged && canSeeReportedBanner)
+    (canSeeLastEditOrClosedAlert && (lastEdit?.reason || closed)) || (canSeeReportedBanner)
   );
 };
-
-export const useShowLearnersTab = () => useSelector(selectLearnersTabEnabled);
 
 /**
  * React hook that gets the current topic ID from the current topic or category.
@@ -173,4 +216,80 @@ export const useCurrentDiscussionTopic = () => {
     return topics[0];
   }
   return null;
+};
+
+export const useUserPostingEnabled = () => {
+  const isPostingEnabled = useSelector(selectIsPostingEnabled);
+  const isUserAdmin = useSelector(selectUserIsStaff);
+  const userHasModerationPrivileges = useSelector(selectUserHasModerationPrivileges);
+  const isUserGroupTA = useSelector(selectUserIsGroupTa);
+  const isCourseAdmin = useSelector(selectIsCourseAdmin);
+  const isCourseStaff = useSelector(selectIsCourseStaff);
+  const isPrivileged = isUserAdmin || userHasModerationPrivileges || isUserGroupTA || isCourseAdmin || isCourseStaff;
+
+  return (isPostingEnabled || isPrivileged);
+};
+
+function camelToConstant(string) {
+  return string.replace(/[A-Z]/g, (match) => `_${match}`).toUpperCase();
+}
+
+export const useTourConfiguration = () => {
+  const intl = useIntl();
+  const dispatch = useDispatch();
+  const { enableInContextSidebar } = useContext(DiscussionContext);
+  const tours = useSelector(selectTours);
+
+  const handleOnDismiss = useCallback((id) => (
+    dispatch(updateTourShowStatus(id))
+  ), []);
+
+  const handleOnEnd = useCallback((id) => (
+    dispatch(updateTourShowStatus(id))
+  ), []);
+
+  const toursConfig = useMemo(() => (
+    tours?.map((tour) => Object.keys(tourCheckpoints(intl)).includes(tour.tourName) && (
+      {
+        tourId: tour.tourName,
+        advanceButtonText: intl.formatMessage(messages.advanceButtonText),
+        dismissButtonText: intl.formatMessage(messages.dismissButtonText),
+        endButtonText: intl.formatMessage(messages.endButtonText),
+        enabled: tour && Boolean(tour.enabled && tour.showTour && !enableInContextSidebar),
+        onDismiss: () => handleOnDismiss(tour.id),
+        onEnd: () => handleOnEnd(tour.id),
+        checkpoints: tourCheckpoints(intl)[camelToConstant(tour.tourName)],
+      }
+    ))
+  ), [tours, enableInContextSidebar]);
+
+  return toursConfig;
+};
+
+export const useDebounce = (value, delay) => {
+  // State and setters for debounced value
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(
+    () => {
+      // Update debounced value after delay
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+      // Cancel the timeout if value changes (also on delay change or unmount)
+      // This is how we prevent debounced value from updating if value is changed ...
+      // .. within the delay period. Timeout gets cleared and restarted.
+      return () => {
+        clearTimeout(handler);
+      };
+    },
+    [value, delay], // Only re-call effect if value or delay changes
+  );
+  return debouncedValue;
+};
+
+export const useHasLikePermission = (contentType, id) => {
+  const { postType } = useContext(PostCommentsContext);
+  const content = { ...useSelector(ContentSelectors[contentType](id)), postType };
+
+  return checkPermissions(content, ContentActions.VOTE);
 };

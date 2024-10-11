@@ -6,6 +6,11 @@ const messages = defineMessages({
     defaultMessage: 'anonymous',
     description: 'Author name displayed when a post is anonymous',
   },
+  addResponse: {
+    id: 'discussions.post.addResponse',
+    defaultMessage: 'Add response',
+    description: 'Button to add a response in a thread of forum posts',
+  },
   lastResponse: {
     id: 'discussions.post.lastResponse',
     defaultMessage: 'Last response {time}',
@@ -28,6 +33,16 @@ const messages = defineMessages({
     defaultMessage: 'Follow',
     description: 'Tooltip/alttext for button to follow a discussion post',
   },
+  followed: {
+    id: 'discussions.post.followed',
+    defaultMessage: 'Followed',
+    description: 'Tooltip/alttext for follow icon showing user followed a post',
+  },
+  notFollowed: {
+    id: 'discussions.post.notFollowed',
+    defaultMessage: 'Not Followed',
+    description: 'Tooltip/alttext for follow icon showing user not following a post',
+  },
   answered: {
     id: 'discussions.post.answered',
     defaultMessage: 'Answered',
@@ -48,10 +63,25 @@ const messages = defineMessages({
     defaultMessage: 'Unlike',
     description: 'Tooltip/alttext for button to remove the like applied to a discussion post',
   },
+  likedPost: {
+    id: 'discussions.post.liked',
+    defaultMessage: 'liked',
+    description: 'Tooltip/alttext for like icon to tell user this post is liked by user',
+  },
+  postLikes: {
+    id: 'discussions.post.likes',
+    defaultMessage: 'likes',
+    description: 'Tooltip/alttext for like icon to tell user about like on the post',
+  },
   viewActivity: {
     id: 'discussions.post.viewActivity',
     defaultMessage: 'View activity',
     description: 'Tooltip/alttext for button to view the activity of a discussion post',
+  },
+  activity: {
+    id: 'discussions.post.activity',
+    defaultMessage: 'Activity',
+    description: 'Tooltip/alttext for icon for showing icon represents activity on a post',
   },
   postClosed: {
     id: 'discussions.post.closed',
@@ -70,6 +100,21 @@ const messages = defineMessages({
   deletePostDescription: {
     id: 'discussions.editor.delete.post.description',
     defaultMessage: 'Are you sure you want to permanently delete this post?',
+  },
+  deleteConfirmationDelete: {
+    id: 'discussions.post.delete.confirmation.button.delete',
+    defaultMessage: 'Delete',
+    description: 'Delete button shown on delete confirmation dialog',
+  },
+  reportPostTitle: {
+    id: 'discussions.editor.report.post.title',
+    defaultMessage: 'Report inappropriate content?',
+    description: 'Title of confirmation dialog shown when reporting a post',
+  },
+  reportPostDescription: {
+    id: 'discussions.editor.report.post.description',
+    defaultMessage: 'The discussion moderation team will review this content and take appropriate action.',
+    description: 'Text displayed in confirmation dialog when deleting a post',
   },
   closePostModalTitle: {
     id: 'discussions.post.closePostModal.title',
@@ -115,6 +160,16 @@ const messages = defineMessages({
     id: 'discussions.post.postWithoutPreview',
     defaultMessage: 'No preview available',
     description: 'No preview available',
+  },
+  srOnlyFollowDescription: {
+    id: 'discussions.post.follow.description',
+    defaultMessage: 'you are following this post',
+    description: 'tell screen readers if user is following a post',
+  },
+  srOnlyUnFollowDescription: {
+    id: 'discussions.post.unfollow.description',
+    defaultMessage: 'you are not following this post',
+    description: 'tell screen readers if user is not following a post',
   },
 });
 

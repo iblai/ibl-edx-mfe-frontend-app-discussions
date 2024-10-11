@@ -1,15 +1,10 @@
-export TRANSIFEX_RESOURCE = frontend-app-discussions
-transifex_resource = frontend-app-discussions
-transifex_langs = "ar,fr,es_419,zh_CN,tr_TR,pl,fr_CA,fr_FR,de_DE,it_IT"
-
+intl_imports = ./node_modules/.bin/intl-imports.js
 transifex_utils = ./node_modules/.bin/transifex-utils.js
 i18n = ./src/i18n
 transifex_input = $(i18n)/transifex_input.json
-tx_url1 = https://www.transifex.com/api/2/project/edx-platform/resource/$(transifex_resource)/translation/en/strings/
-tx_url2 = https://www.transifex.com/api/2/project/edx-platform/resource/$(transifex_resource)/source/
 
 # This directory must match .babelrc .
-transifex_temp = ./temp/babel-plugin-react-intl
+transifex_temp = ./temp/babel-plugin-formatjs
 
 NPM_TESTS=build i18n_extract lint test
 
@@ -57,9 +52,19 @@ push_translations:
 	# Pushing comments to Transifex...
 	./node_modules/@edx/reactifex/bash_scripts/put_comments_v3.sh
 
-# Pulls translations from Transifex.
 pull_translations:
-	tx pull -t -f --mode reviewed --languages=$(transifex_langs)
+	rm -rf src/i18n/messages
+	mkdir src/i18n/messages
+	cd src/i18n/messages \
+	  && atlas pull $(ATLAS_OPTIONS) \
+	           translations/frontend-component-header/src/i18n/messages:frontend-component-header  \
+	           translations/frontend-component-footer/src/i18n/messages:frontend-component-footer \
+	           translations/frontend-platform/src/i18n/messages:frontend-platform \
+	           translations/paragon/src/i18n/messages:paragon \
+	           translations/frontend-app-discussions/src/i18n/messages:frontend-app-discussions
+
+	$(intl_imports) frontend-component-header frontend-component-footer frontend-platform paragon frontend-app-discussions
+# endif
 
 # This target is used by Travis.
 validate-no-uncommitted-package-lock-changes:

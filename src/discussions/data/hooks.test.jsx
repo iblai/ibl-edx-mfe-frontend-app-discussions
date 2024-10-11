@@ -1,25 +1,43 @@
 import { render } from '@testing-library/react';
+import MockAdapter from 'axios-mock-adapter';
 import { IntlProvider } from 'react-intl';
+import { Factory } from 'rosie';
 
 import { initializeMockApp } from '@edx/frontend-platform';
+import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { AppProvider } from '@edx/frontend-platform/react';
 
 import { initializeStore } from '../../store';
-import { DiscussionContext } from '../common/context';
-import { useCurrentDiscussionTopic } from './hooks';
+import executeThunk from '../../test-utils';
+import DiscussionContext from '../common/context';
+import { getCourseConfigApiUrl } from './api';
+import { useCurrentDiscussionTopic, useUserPostingEnabled } from './hooks';
+import fetchCourseConfig from './thunks';
 
+const courseId = 'course-v1:edX+TestX+Test_Course';
+const courseConfigApiUrl = getCourseConfigApiUrl();
 let store;
-initializeMockApp();
+let axiosMock;
+
+const generateApiResponse = (isPostingEnabled, isCourseAdmin = false) => ({
+  isPostingEnabled,
+  hasModerationPrivileges: false,
+  isGroupTa: false,
+  isCourseAdmin,
+  isCourseStaff: false,
+  isUserAdmin: false,
+});
+
 describe('Hooks', () => {
   describe('useCurrentDiscussionTopic', () => {
-    function ComponentWithHook() {
+    const ComponentWithHook = () => {
       const topic = useCurrentDiscussionTopic();
       return (
         <div>
           {String(topic)}
         </div>
       );
-    }
+    };
 
     function renderComponent({ topicId, category }) {
       return render(
@@ -39,6 +57,7 @@ describe('Hooks', () => {
     }
 
     beforeEach(() => {
+      initializeMockApp();
       store = initializeStore({
         blocks: {
           blocks: {
@@ -80,6 +99,74 @@ describe('Hooks', () => {
     test('when the category has no topics', () => {
       const { queryByText } = renderComponent({ category: 'empty-key' });
       expect(queryByText('null')).toBeInTheDocument();
+    });
+  });
+
+  describe('useUserPostingEnabled', () => {
+    const ComponentWithHook = () => {
+      const isUserPrivilegedInPostingRestriction = useUserPostingEnabled();
+      return (
+        <div>
+          {String(isUserPrivilegedInPostingRestriction)}
+        </div>
+      );
+    };
+
+    function renderComponent() {
+      return render(
+        <IntlProvider locale="en">
+          <AppProvider store={store}>
+            <ComponentWithHook />
+          </AppProvider>
+        </IntlProvider>,
+      );
+    }
+    describe('User can add Thread in Posting Restrictions ', () => {
+      beforeEach(() => {
+        initializeMockApp({
+          authenticatedUser: {
+            userId: 3,
+            username: 'abc123',
+            administrator: true,
+            roles: [],
+          },
+        });
+        axiosMock = new MockAdapter(getAuthenticatedHttpClient());
+        Factory.resetAll();
+        store = initializeStore();
+      });
+
+      test('when posting is not disabled and Role is Learner return true', async () => {
+        axiosMock.onGet(`${courseConfigApiUrl}${courseId}/`)
+          .reply(200, generateApiResponse(true, false));
+        await executeThunk(fetchCourseConfig(courseId), store.dispatch, store.getState);
+        const { queryByText } = renderComponent();
+        expect(queryByText('true')).toBeInTheDocument();
+      });
+
+      test('when posting is not disabled and Role is not Learner return true', async () => {
+        axiosMock.onGet(`${courseConfigApiUrl}${courseId}/`)
+          .reply(200, generateApiResponse(true, true));
+        await executeThunk(fetchCourseConfig(courseId), store.dispatch, store.getState);
+        const { queryByText } = renderComponent();
+        expect(queryByText('true')).toBeInTheDocument();
+      });
+
+      test('when posting is disabled and Role is Learner return false', async () => {
+        axiosMock.onGet(`${courseConfigApiUrl}${courseId}/`)
+          .reply(200, generateApiResponse(false, false));
+        await executeThunk(fetchCourseConfig(courseId), store.dispatch, store.getState);
+        const { queryByText } = renderComponent();
+        expect(queryByText('false')).toBeInTheDocument();
+      });
+
+      test('when posting is not disabled and Role is not Learner return true', async () => {
+        axiosMock.onGet(`${courseConfigApiUrl}${courseId}/`)
+          .reply(200, generateApiResponse(false, true));
+        await executeThunk(fetchCourseConfig(courseId), store.dispatch, store.getState);
+        const { queryByText } = renderComponent();
+        expect(queryByText('true')).toBeInTheDocument();
+      });
     });
   });
 });

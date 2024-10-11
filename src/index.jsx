@@ -4,25 +4,23 @@ import 'regenerator-runtime/runtime';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { messages as footerMessages } from '@edx/frontend-component-footer';
-import { messages as headerMessages } from '@edx/frontend-component-header';
 import {
   APP_INIT_ERROR, APP_READY, initialize, mergeConfig,
   subscribe,
 } from '@edx/frontend-platform';
 import { AppProvider, ErrorPage } from '@edx/frontend-platform/react';
-import { messages as paragonMessages } from '@edx/paragon';
 
+import Head from './components/Head/Head';
 import { DiscussionsHome } from './discussions';
-import appMessages from './i18n';
+import messages from './i18n';
 import store from './store';
 
-import './assets/favicon.ico';
 import './index.scss';
 
 subscribe(APP_READY, () => {
   ReactDOM.render(
     <AppProvider store={store}>
+      <Head />
       <DiscussionsHome />
     </AppProvider>,
     document.getElementById('root'),
@@ -35,17 +33,13 @@ subscribe(APP_INIT_ERROR, (error) => {
 
 initialize({
   requireAuthenticatedUser: true,
-  messages: [
-    headerMessages,
-    footerMessages,
-    appMessages,
-    paragonMessages,
-  ],
+  messages,
   handlers: {
     config: () => {
       mergeConfig({
         LEARNING_BASE_URL: process.env.LEARNING_BASE_URL,
-        DISPLAY_FEEDBACK_BANNER: process.env.DISPLAY_FEEDBACK_BANNER || 'false',
+        LEARNER_FEEDBACK_URL: process.env.LEARNER_FEEDBACK_URL,
+        STAFF_FEEDBACK_URL: process.env.STAFF_FEEDBACK_URL,
       }, 'DiscussionsConfig');
     },
   },

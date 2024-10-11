@@ -1,17 +1,25 @@
-/* eslint-disable import/prefer-default-export */
+import { useCallback, useContext, useMemo } from 'react';
+
+import {
+  CheckCircle, CheckCircleOutline, Delete, Edit, InsertLink,
+  Institution, Lock, LockOpen, Pin, Report, School,
+  Verified, VerifiedOutline,
+} from '@openedx/paragon/icons';
 import { getIn } from 'formik';
 import { uniqBy } from 'lodash';
-import { generatePath, useRouteMatch } from 'react-router';
+import { useSelector } from 'react-redux';
+import {
+  generatePath, matchPath, useLocation,
+} from 'react-router-dom';
 
 import { getConfig } from '@edx/frontend-platform';
-import {
-  CheckCircle,
-  CheckCircleOutline,
-  Delete, Edit, Pin, QuestionAnswer, Report, Verified, VerifiedOutline,
-} from '@edx/paragon/icons';
 
-import { InsertLink } from '../components/icons';
-import { ContentActions, Routes, ThreadType } from '../data/constants';
+import { DENIED, LOADED } from '../components/NavigationBar/data/slice';
+import {
+  ContentActions, Routes, ThreadType,
+} from '../data/constants';
+import { ContentSelectors } from './data/constants';
+import PostCommentsContext from './post-comments/postCommentsContext';
 import messages from './messages';
 
 /**
@@ -40,8 +48,9 @@ export function isFormikFieldInvalid(field, {
  * @returns {string}
  */
 export function useCommentsPagePath() {
-  const { params } = useRouteMatch(Routes.COMMENTS.PAGE);
-  return Routes.COMMENTS.PAGES[params.page];
+  const location = useLocation();
+  const { params: { page } } = matchPath({ path: Routes.COMMENTS.PAGE }, location.pathname);
+  return Routes.COMMENTS.PAGES[page];
 }
 
 /**
@@ -143,14 +152,14 @@ export const ACTIONS_LIST = [
   {
     id: 'close',
     action: ContentActions.CLOSE,
-    icon: QuestionAnswer,
+    icon: Lock,
     label: messages.closeAction,
     conditions: { closed: false },
   },
   {
     id: 'reopen',
     action: ContentActions.CLOSE,
-    icon: QuestionAnswer,
+    icon: LockOpen,
     label: messages.reopenAction,
     conditions: { closed: true },
   },
@@ -177,21 +186,26 @@ export const ACTIONS_LIST = [
   },
 ];
 
-export function useActions(content) {
-  const checkConditions = (item, conditions) => (
+export function useActions(contentType, id) {
+  const { postType } = useContext(PostCommentsContext);
+  const content = { ...useSelector(ContentSelectors[contentType](id)), postType };
+
+  const checkConditions = useCallback((item, conditions) => (
     conditions
       ? Object.keys(conditions)
         .map(key => item[key] === conditions[key])
         .every(condition => condition === true)
       : true
-  );
+  ), []);
 
-  return ACTIONS_LIST.filter(
+  const actions = useMemo(() => ACTIONS_LIST.filter(
     ({
       action,
       conditions = null,
     }) => checkPermissions(content, action) && checkConditions(content, conditions),
-  );
+  ), [content]);
+
+  return actions;
 }
 
 export const formikCompatibleHandler = (formikHandler, name) => (value) => formikHandler({
@@ -260,24 +274,52 @@ export const filterPosts = (posts, filterBy) => uniqBy(posts, 'id').filter(
   post => (filterBy.startsWith('un') ? !post[filterBy.slice(2)] : post[filterBy]),
 );
 
-/**
- * Helper function to make a check if date is in given range
- * @param {Date} date this date to be checked in range
- * @param {Date} start start date
- * @param {Date} end end date
- */
-export function dateInDateRange(date, start, end) {
-  return date >= start && date <= end;
+export function handleKeyDown(event) {
+  const { key } = event;
+  if (key !== 'ArrowDown' && key !== 'ArrowUp') { return; }
+  const option = event.target;
+
+  let selectedOption;
+  if (key === 'ArrowDown') { selectedOption = option.nextElementSibling; }
+  if (key === 'ArrowUp') { selectedOption = option.previousElementSibling; }
+
+  if (selectedOption) {
+    selectedOption.focus();
+  }
 }
 
-/**
- * Helper function to make a check if date is in given range
- * @param {array} blackoutDateRanges start date
- * @return Boolean
- */
-export function inBlackoutDateRange(blackoutDateRanges) {
-  const now = new Date();
-  return blackoutDateRanges.some(
-    (blackoutDateRange) => dateInDateRange(now, new Date(blackoutDateRange.start), new Date(blackoutDateRange.end)),
-  );
+export function isLastElementOfList(list, element) {
+  return list[list.length - 1] === element;
 }
+
+export function truncatePath(path) {
+  return path.substring(0, path.lastIndexOf('/'));
+}
+
+export function getAuthorLabel(intl, authorLabel) {
+  const authorLabelMappings = {
+    Staff: {
+      icon: Institution,
+      authorLabelMessage: intl.formatMessage(messages.authorLabelStaff),
+    },
+    Moderator: {
+      icon: School,
+      authorLabelMessage: intl.formatMessage(messages.authorLabelModerator),
+    },
+    'Community TA': {
+      icon: School,
+      authorLabelMessage: intl.formatMessage(messages.authorLabelTA),
+    },
+  };
+
+  return authorLabelMappings[authorLabel] || {};
+}
+
+export const isCourseStatusValid = (courseStatus) => [DENIED, LOADED].includes(courseStatus);
+
+export const extractContent = (content) => {
+  if (typeof content === 'object') {
+    return content.target.getContent();
+  }
+  return content;
+};

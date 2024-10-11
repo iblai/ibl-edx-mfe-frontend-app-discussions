@@ -31,6 +31,11 @@ const messages = defineMessages({
     defaultMessage: 'Delete',
     description: 'Action to delete a post or comment',
   },
+  confirmationConfirm: {
+    id: 'discussions.confirmation.button.confirm',
+    defaultMessage: 'Confirm',
+    description: 'Confirm button shown on confirmation dialog',
+  },
   closeAction: {
     id: 'discussions.actions.close',
     defaultMessage: 'Close',
@@ -71,15 +76,10 @@ const messages = defineMessages({
     defaultMessage: 'Unmark as answered',
     description: 'Action to unmark a comment as answering a post',
   },
-  deleteConfirmationCancel: {
-    id: 'discussions.delete.confirmation.button.cancel',
+  confirmationCancel: {
+    id: 'discussions.modal.confirmation.button.cancel',
     defaultMessage: 'Cancel',
     description: 'Cancel button shown on delete confirmation dialog',
-  },
-  deleteConfirmationDelete: {
-    id: 'discussions.delete.confirmation.button.delete',
-    defaultMessage: 'Delete',
-    description: 'Delete button shown on delete confirmation dialog',
   },
   emptyAllTopics: {
     id: 'discussions.empty.allTopics',
@@ -153,9 +153,14 @@ const messages = defineMessages({
     defaultMessage: 'Staff',
     description: 'A label for staff users displayed next to their username.',
   },
+  authorLabelModerator: {
+    id: 'discussions.authors.label.moderator',
+    defaultMessage: 'TA',
+    description: 'A label for moderators displayed next to their username.',
+  },
   authorLabelTA: {
     id: 'discussions.authors.label.ta',
-    defaultMessage: 'TA',
+    defaultMessage: 'CTA',
     description: 'A label for community TAs displayed next to their username.',
   },
   loadMorePosts: {
@@ -168,25 +173,10 @@ const messages = defineMessages({
     defaultMessage: 'anonymous',
     description: 'Author name displayed when a post is anonymous',
   },
-  bannerMessage: {
-    id: 'discussion.banner.welcomeMessage',
-    defaultMessage: '🎉 Welcome to the new and improved discussions experience!',
-    description: 'Information banner welcome text',
-  },
-  learnMoreBannerLink: {
-    id: 'discussion.banner.learnMore',
-    defaultMessage: 'Learn more',
-    description: 'learn more button to redirect users to know more about new discussion experience ',
-  },
-  shareFeedback: {
-    id: 'discussion.banner.shareFeedback',
-    defaultMessage: 'Share feedback',
-    description: 'Share feedback button to open feedback forms',
-  },
   blackoutDiscussionInformation: {
     id: 'discussion.blackoutBanner.information',
-    defaultMessage: 'Blackout dates are currently active. Posting in discussions is unavailable at this time.',
-    description: 'Informative text when discussions blackout is active',
+    defaultMessage: 'Posting in discussions is disabled by the course team',
+    description: 'Informative text when discussion posting is disabled',
   },
   imageWarningMessage: {
     id: 'discussions.editor.image.warning.message',
@@ -202,6 +192,21 @@ const messages = defineMessages({
     id: 'discussions.editor.image.warning.dismiss',
     defaultMessage: 'Ok',
     description: 'Modal dismiss button text',
+  },
+  contentUnavailableTitle: {
+    id: 'discussions.content.unavailable.title',
+    defaultMessage: 'Content unavailable',
+    description: 'Title on content page when the user has not logged into the MFE or not enrolled in the course.',
+  },
+  contentUnavailableSubTitle: {
+    id: 'discussions.content.unavailable.subTitle',
+    defaultMessage: 'You may not be able to see this content because you\'re not logged in, you\'re not enrolled in the course, or your audit access has expired.',
+    description: 'Sub title on content page when the user has not logged into the MFE or not enrolled in the course.',
+  },
+  contentUnavailableAction: {
+    id: 'discussions.content.unavailable.action',
+    defaultMessage: 'Enroll',
+    description: 'Action button on content page when the user has not logged into the MFE or not enrolled in the course.',
   },
 });
 

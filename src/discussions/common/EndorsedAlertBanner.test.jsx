@@ -7,11 +7,12 @@ import { AppProvider } from '@edx/frontend-platform/react';
 
 import { ThreadType } from '../../data/constants';
 import { initializeStore } from '../../store';
-import messages from '../comments/messages';
-import { DiscussionContext } from './context';
+import messages from '../post-comments/messages';
+import PostCommentsContext from '../post-comments/postCommentsContext';
+import DiscussionContext from './context';
 import EndorsedAlertBanner from './EndorsedAlertBanner';
 
-import '../comments/data/__factories__';
+import '../post-comments/data/__factories__';
 import '../posts/data/__factories__';
 
 let store;
@@ -21,24 +22,30 @@ function buildTestContent(type, buildParams) {
   return camelCaseObject(Factory.build(type, { ...buildParamsSnakeCase }, null));
 }
 
-function renderComponent(
-  content, postType,
-) {
+const renderComponent = (content, postType) => {
   render(
     <IntlProvider locale="en">
       <AppProvider store={store}>
         <DiscussionContext.Provider
           value={{ courseId: 'course-v1:edX+DemoX+Demo_Course' }}
         >
-          <EndorsedAlertBanner
-            content={content}
-            postType={postType}
-          />
+          <PostCommentsContext.Provider value={{
+            postType,
+          }}
+          >
+            <EndorsedAlertBanner
+              endorsed={content.endorsed}
+              endorsedAt={content.endorsedAt}
+              endorsedBy={content.endorsedBy}
+              endorsedByLabel={content.endorsedByLabel}
+            />
+          </PostCommentsContext.Provider>
+
         </DiscussionContext.Provider>
       </AppProvider>
     </IntlProvider>,
   );
-}
+};
 
 describe.each([
   {
@@ -46,21 +53,21 @@ describe.each([
     type: 'comment',
     postType: ThreadType.QUESTION,
     props: { endorsed: true, endorsedBy: 'test-user', endorsedByLabel: 'Staff' },
-    expectText: [messages.answer.defaultMessage, messages.answeredLabel.defaultMessage, 'test-user', 'Staff'],
+    expectText: [messages.answer.defaultMessage, 'Staff'],
   },
   {
     label: 'TA endorsed comment in a question thread',
     type: 'comment',
     postType: ThreadType.QUESTION,
     props: { endorsed: true, endorsedBy: 'test-user', endorsedByLabel: 'Community TA' },
-    expectText: [messages.answer.defaultMessage, messages.answeredLabel.defaultMessage, 'test-user', 'TA'],
+    expectText: [messages.answer.defaultMessage, 'TA'],
   },
   {
     label: 'endorsed comment in a discussion thread',
     type: 'comment',
     postType: ThreadType.DISCUSSION,
     props: { endorsed: true, endorsedBy: 'test-user' },
-    expectText: [messages.endorsed.defaultMessage, messages.endorsedLabel.defaultMessage, 'test-user'],
+    expectText: [messages.endorsed.defaultMessage],
   },
 ])('EndorsedAlertBanner', ({
   label, type, postType, props, expectText,
@@ -77,7 +84,6 @@ describe.each([
     store = initializeStore({
       config: {
         hasModerationPrivileges: true,
-        reasonCodesEnabled: true,
       },
     });
     const content = buildTestContent(type, props);

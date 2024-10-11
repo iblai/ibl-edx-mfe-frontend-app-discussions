@@ -1,16 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 
+import { Button, Spinner } from '@openedx/paragon';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  Redirect, useLocation, useParams,
-} from 'react-router';
+import { useParams } from 'react-router-dom';
 
-import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
-import { Button, Spinner } from '@edx/paragon';
+import { useIntl } from '@edx/frontend-platform/i18n';
 
 import SearchInfo from '../../components/SearchInfo';
-import { RequestStatus, Routes } from '../../data/constants';
-import { selectconfigLoadingStatus, selectLearnersTabEnabled } from '../data/selectors';
+import { RequestStatus } from '../../data/constants';
+import { selectConfigLoadingStatus } from '../data/selectors';
 import NoResults from '../posts/NoResults';
 import {
   learnersLoadingStatus,
@@ -24,29 +22,26 @@ import { fetchLearners } from './data/thunks';
 import { LearnerCard, LearnerFilterBar } from './learner';
 import messages from './messages';
 
-function LearnersView({ intl }) {
+const LearnersView = () => {
+  const intl = useIntl();
   const { courseId } = useParams();
-  const location = useLocation();
   const dispatch = useDispatch();
   const orderBy = useSelector(selectLearnerSorting());
   const nextPage = useSelector(selectLearnerNextPage());
   const loadingStatus = useSelector(learnersLoadingStatus());
   const usernameSearch = useSelector(selectUsernameSearch());
-  const courseConfigLoadingStatus = useSelector(selectconfigLoadingStatus);
-  const learnersTabEnabled = useSelector(selectLearnersTabEnabled);
+  const courseConfigLoadingStatus = useSelector(selectConfigLoadingStatus);
   const learners = useSelector(selectAllLearners);
 
   useEffect(() => {
-    if (learnersTabEnabled) {
-      if (usernameSearch) {
-        dispatch(fetchLearners(courseId, { orderBy, usernameSearch }));
-      } else {
-        dispatch(fetchLearners(courseId, { orderBy }));
-      }
+    if (usernameSearch) {
+      dispatch(fetchLearners(courseId, { orderBy, usernameSearch }));
+    } else {
+      dispatch(fetchLearners(courseId, { orderBy }));
     }
-  }, [courseId, orderBy, learnersTabEnabled, usernameSearch]);
+  }, [courseId, orderBy, usernameSearch]);
 
-  const loadPage = async () => {
+  const loadPage = useCallback(async () => {
     if (nextPage) {
       dispatch(fetchLearners(courseId, {
         orderBy,
@@ -54,7 +49,20 @@ function LearnersView({ intl }) {
         usernameSearch,
       }));
     }
-  };
+  }, [courseId, orderBy, nextPage, usernameSearch]);
+
+  const handleOnClear = useCallback(() => {
+    dispatch(setUsernameSearch(''));
+  }, []);
+
+  const renderLearnersList = useMemo(() => {
+    if (courseConfigLoadingStatus === RequestStatus.SUCCESSFUL) {
+      return learners.map((learner) => (
+        <LearnerCard learner={learner} key={learner.username} />
+      ));
+    }
+    return null;
+  }, [courseConfigLoadingStatus, learners]);
 
   return (
     <div className="d-flex flex-column border-right border-light-400">
@@ -65,31 +73,18 @@ function LearnersView({ intl }) {
           text={usernameSearch}
           count={learners.length}
           loadingStatus={loadingStatus}
-          onClear={() => dispatch(setUsernameSearch(''))}
+          onClear={handleOnClear}
         />
       )}
       <div className="list-group list-group-flush learner" role="list">
-        {courseConfigLoadingStatus === RequestStatus.SUCCESSFUL && !learnersTabEnabled && (
-        <Redirect
-          to={{
-            ...location,
-            pathname: Routes.DISCUSSIONS.PATH,
-          }}
-        />
-        )}
-        {courseConfigLoadingStatus === RequestStatus.SUCCESSFUL
-          && learnersTabEnabled
-          && learners.map((learner, index) => (
-            // eslint-disable-next-line react/no-array-index-key
-            <LearnerCard learner={learner} key={index} courseId={courseId} />
-          ))}
+        {renderLearnersList}
         {loadingStatus === RequestStatus.IN_PROGRESS ? (
           <div className="d-flex justify-content-center p-4">
             <Spinner animation="border" variant="primary" size="lg" />
           </div>
         ) : (
           nextPage && loadingStatus === RequestStatus.SUCCESSFUL && (
-            <Button onClick={() => loadPage()} variant="primary" size="md">
+            <Button onClick={() => loadPage()} variant="primary" size="md" data-testid="load-more-learners">
               {intl.formatMessage(messages.loadMore)}
             </Button>
           )
@@ -98,10 +93,6 @@ function LearnersView({ intl }) {
       </div>
     </div>
   );
-}
-
-LearnersView.propTypes = {
-  intl: intlShape.isRequired,
 };
 
-export default injectIntl(LearnersView);
+export default LearnersView;

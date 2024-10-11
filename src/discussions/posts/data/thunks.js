@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import { camelCaseObject } from '@edx/frontend-platform';
 import { logError } from '@edx/frontend-platform/logging';
 
@@ -102,6 +101,7 @@ export function fetchThreads(courseId, {
   author = null,
   filters = {},
   page = 1,
+  isFilterChanged,
   countFlagged,
 } = {}) {
   const options = {
@@ -141,7 +141,7 @@ export function fetchThreads(courseId, {
       const data = await getThreads(courseId, options);
       const normalisedData = normaliseThreads(camelCaseObject(data), topicIds);
       dispatch(fetchThreadsSuccess({
-        ...normalisedData, page, author, textSearchRewrite: data.text_search_rewrite,
+        ...normalisedData, page, author, textSearchRewrite: data.text_search_rewrite, isFilterChanged,
       }));
     } catch (error) {
       if (getHttpErrorStatus(error) === 403) {
@@ -203,6 +203,7 @@ export function createNewThread({
   anonymous,
   anonymousToPeers,
   cohort,
+  enableInContextSidebar,
 }) {
   return async (dispatch) => {
     try {
@@ -222,7 +223,7 @@ export function createNewThread({
         following,
         anonymous,
         anonymousToPeers,
-      });
+      }, enableInContextSidebar);
       dispatch(postThreadSuccess(camelCaseObject(data)));
     } catch (error) {
       if (getHttpErrorStatus(error) === 403) {

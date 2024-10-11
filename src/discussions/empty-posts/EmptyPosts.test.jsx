@@ -10,7 +10,7 @@ import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { AppProvider } from '@edx/frontend-platform/react';
 
 import { initializeStore } from '../../store';
-import { executeThunk } from '../../test-utils';
+import executeThunk from '../../test-utils';
 import messages from '../messages';
 import { getThreadsApiUrl } from '../posts/data/api';
 import { fetchThreads } from '../posts/data/thunks';
@@ -26,7 +26,7 @@ function renderComponent(location = `/${courseId}/`) {
   return render(
     <IntlProvider locale="en">
       <ResponsiveContext.Provider value={{ width: 1280 }}>
-        <AppProvider store={store}>
+        <AppProvider store={store} wrapWithRouter={false}>
           <MemoryRouter initialEntries={[location]}>
             <EmptyPosts subTitleMessage={messages.emptyMyPosts} />
           </MemoryRouter>
@@ -57,7 +57,7 @@ describe('EmptyPage', () => {
     store = initializeStore();
   });
 
-  test('"posts youve interacted with" message shown when no posts in system', async () => {
+  test('"posts you\'ve interacted with" message shown when no posts in system', async () => {
     renderComponent(`/${courseId}/my-posts/`);
     expect(
       screen.queryByText(messages.emptyMyPosts.defaultMessage),

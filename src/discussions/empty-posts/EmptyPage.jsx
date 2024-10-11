@@ -1,21 +1,20 @@
 import React from 'react';
 import propTypes from 'prop-types';
 
+import { Button } from '@openedx/paragon';
 import classNames from 'classnames';
 
-import { Button } from '@edx/paragon';
+import EmptyIcon from '../../assets/Empty';
 
-import { ReactComponent as EmptyIcon } from '../../assets/empty.svg';
-
-function EmptyPage({
+const EmptyPage = ({
   title,
   subTitle = null,
   action = null,
   actionText = null,
   fullWidth = false,
-}) {
+}) => {
   const containerClasses = classNames(
-    'min-content-height justify-content-center align-items-center d-flex w-100 flex-column pt-5',
+    'min-content-height justify-content-center align-items-center d-flex w-100 flex-column',
     { 'bg-light-400': !fullWidth },
   );
 
@@ -23,7 +22,7 @@ function EmptyPage({
     <div className={containerClasses}>
       <div className="d-flex flex-column align-items-center">
         <EmptyIcon />
-        <h3 className="pt-3">{title}</h3>
+        <h3 className="pt-3 text-gray-500 font-weight-500">{title}</h3>
         {subTitle && <p className="pb-2">{subTitle}</p>}
         {action && actionText && (
           <Button onClick={action} variant="outline-dark">
@@ -33,7 +32,7 @@ function EmptyPage({
       </div>
     </div>
   );
-}
+};
 
 EmptyPage.propTypes = {
   title: propTypes.string.isRequired,
@@ -50,4 +49,4 @@ EmptyPage.defaultProps = {
   actionText: null,
 };
 
-export default EmptyPage;
+export default React.memo(EmptyPage);

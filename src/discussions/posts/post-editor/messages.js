@@ -113,8 +113,38 @@ const messages = defineMessages({
   },
   showPreviewButton: {
     id: 'discussions.editor.posts.showPreview.button',
-    defaultMessage: 'Show Preview',
+    defaultMessage: 'Show preview',
     description: 'show preview button text to allow user to see their post content.',
+  },
+  showHelpIcon: {
+    id: 'discussions.editor.posts.showHelp.icon',
+    defaultMessage: 'Show Help',
+    description: 'show help icon to allow user to see important documentation.',
+  },
+  discussionHelpHeader: {
+    id: 'discussions.editor.posts.discussionHelpHeader',
+    defaultMessage: 'Discussions help',
+    description: 'header text for post help section.',
+  },
+  discussionHelpDescription: {
+    id: 'discussions.editor.posts.discussionHelpDescription',
+    defaultMessage: 'Course discussions give you the opportunity to start conversations, ask questions, and interact with other learners. See the links below to learn more:',
+    description: 'description message for post help section.',
+  },
+  discussionHelpCourseParticipation: {
+    id: 'discussions.editor.posts.discussionHelpCourseParticipation',
+    defaultMessage: 'Participating in course discussions',
+    description: 'Documentation link title for participating in course discussions.',
+  },
+  discussionHelpMathExpressions: {
+    id: 'discussions.editor.posts.discussionHelpMathExpressions',
+    defaultMessage: 'Entering math expressions in course discussions',
+    description: 'Documentation link title for entering math expressions in course discussions.',
+  },
+  discussionHelpTooltip: {
+    id: 'discussions.editor.posts.discussionHelpTooltip',
+    defaultMessage: 'Learn more about MathJax & LaTeX',
+    description: 'Tooltip help message for documentation help.',
   },
   actionsAlt: {
     id: 'discussions.actions.label',
@@ -135,6 +165,11 @@ const messages = defineMessages({
     id: 'discussion.thread.notFound',
     defaultMessage: 'Thread not found',
     description: 'message to show on screen if the request thread is not found in course',
+  },
+  archivedTopics: {
+    id: 'discussions.topics.archived.label',
+    defaultMessage: 'Archived',
+    description: 'Heading for displaying topics that are archived.',
   },
 });
 

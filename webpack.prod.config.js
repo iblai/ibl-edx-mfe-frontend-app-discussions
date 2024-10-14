@@ -1,8 +1,3 @@
-const path = require('path');
-const getBaseConfig = require('@openedx/frontend-build/lib/webpack.config.js');
+const { createConfig } = require('@openedx/frontend-build');
 
-const config = getBaseConfig('webpack-prod');
-
-// Add any custom configurations here
-
-module.exports = config;
+module.exports = createConfig('webpack-prod');

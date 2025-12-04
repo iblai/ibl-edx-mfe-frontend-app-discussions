@@ -13,6 +13,7 @@ import {
 import { AppProvider, ErrorPage } from '@edx/frontend-platform/react';
 
 import Head from './components/Head/Head';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { DiscussionsHome } from './discussions';
 import messages from './i18n';
 import store from './store';
@@ -56,8 +57,10 @@ function renderReactApp() {
     <StrictMode>
       <AppProvider store={store}>
         <AuthenticatedHttpClientProvider>
-          <Head />
-          <DiscussionsHome />
+          <ErrorBoundary>
+            <Head />
+            <DiscussionsHome />
+          </ErrorBoundary>
         </AuthenticatedHttpClientProvider>
       </AppProvider>
     </StrictMode>,

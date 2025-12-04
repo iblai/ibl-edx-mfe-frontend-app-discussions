@@ -44,7 +44,7 @@ const PostsList = ({
       orderBy,
       filters,
       page: pageNum,
-      author: showOwnPosts ? authenticatedUser.username : null,
+      author: showOwnPosts && authenticatedUser?.username ? authenticatedUser.username : null,
       countFlagged: (userHasModerationPrivileges || userIsStaff) || undefined,
       topicIds,
       isFilterChanged,
@@ -55,7 +55,7 @@ const PostsList = ({
     } else {
       dispatch(fetchThreads(courseId, params));
     }
-  }, [courseId, orderBy, filters, showOwnPosts, authenticatedUser.username, userHasModerationPrivileges, userIsStaff]);
+  }, [courseId, orderBy, filters, showOwnPosts, authenticatedUser?.username, userHasModerationPrivileges, userIsStaff]);
 
   useEffect(() => {
     if (topicsIds !== undefined && configStatus === RequestStatus.SUCCESSFUL) {

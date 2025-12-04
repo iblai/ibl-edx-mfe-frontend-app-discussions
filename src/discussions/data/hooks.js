@@ -95,7 +95,7 @@ export function useCourseBlockData(courseId) {
 
   useEffect(() => {
     async function fetchBaseData() {
-      if (courseStatus === LOADED && (!isUserLearner || isEnrolled)) {
+      if (courseStatus === LOADED && (!isUserLearner || isEnrolled) && authenticatedUser?.username) {
         await dispatch(fetchCourseBlocks(courseId, authenticatedUser.username));
       }
     }
@@ -185,7 +185,8 @@ export const useAlertBannerVisible = (
 ) => {
   const userHasModerationPrivileges = useSelector(selectUserHasModerationPrivileges);
   const userIsGroupTa = useSelector(selectUserIsGroupTa);
-  const userIsContentAuthor = getAuthenticatedUser().username === author;
+  const authenticatedUser = getAuthenticatedUser();
+  const userIsContentAuthor = authenticatedUser?.username === author;
   const canSeeLastEditOrClosedAlert = (userHasModerationPrivileges || userIsContentAuthor || userIsGroupTa);
   const canSeeReportedBanner = abuseFlagged;
 

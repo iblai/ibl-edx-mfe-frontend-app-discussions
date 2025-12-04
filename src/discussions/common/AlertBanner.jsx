@@ -29,7 +29,8 @@ const AlertBanner = ({
   const userHasModerationPrivileges = useSelector(selectUserHasModerationPrivileges);
   const userIsGroupTa = useSelector(selectUserIsGroupTa);
   const userIsGlobalStaff = useSelector(selectUserIsStaff);
-  const userIsContentAuthor = getAuthenticatedUser().username === author;
+  const authenticatedUser = getAuthenticatedUser();
+  const userIsContentAuthor = authenticatedUser?.username === author;
   const canSeeReportedBanner = abuseFlagged;
   const canSeeLastEditOrClosedAlert = (userHasModerationPrivileges || userIsGroupTa
     || userIsGlobalStaff || userIsContentAuthor

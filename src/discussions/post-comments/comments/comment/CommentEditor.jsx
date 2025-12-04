@@ -52,7 +52,7 @@ const CommentEditor = ({
 
   const canDisplayEditReason = (edit
     && (userHasModerationPrivileges || userIsGroupTa || userIsStaff)
-    && author !== authenticatedUser.username
+    && authenticatedUser?.username && author !== authenticatedUser.username
   );
 
   const editReasonCodeValidation = canDisplayEditReason && {

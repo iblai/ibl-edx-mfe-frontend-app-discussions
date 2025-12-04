@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const { createConfig } = require('@openedx/frontend-build');
 
 const config = createConfig('webpack-prod');
@@ -6,6 +7,29 @@ const config = createConfig('webpack-prod');
 // Use local frontend-platform instead of npm package
 const frontendPlatformPath = path.resolve('/openedx/frontend-platform/dist');
 
+// Verify frontend-platform exists before setting up aliases
+if (!fs.existsSync(frontendPlatformPath)) {
+  console.error(`ERROR: Frontend-platform not found at ${frontendPlatformPath}`);
+  console.error('Current directory:', __dirname);
+  console.error('Checking if path exists...');
+  try {
+    const stats = fs.statSync(frontendPlatformPath);
+    console.error('Path exists, stats:', stats);
+  } catch (e) {
+    console.error('Path does not exist:', e.message);
+  }
+  throw new Error(`Frontend-platform not found at ${frontendPlatformPath}`);
+}
+
+// Ensure resolve and resolve.alias exist
+if (!config.resolve) {
+  config.resolve = {};
+}
+if (!config.resolve.alias) {
+  config.resolve.alias = {};
+}
+
+// Merge aliases with existing ones
 config.resolve.alias = {
   ...config.resolve.alias,
   '@src': path.resolve(__dirname, 'src'),
@@ -26,5 +50,10 @@ config.resolve.alias = {
   '@edx/frontend-platform/logging': path.join(frontendPlatformPath, 'logging'),
   '@edx/frontend-platform/react': path.join(frontendPlatformPath, 'react'),
 };
+
+console.log('[Webpack Config] Frontend-platform aliases configured:', {
+  frontendPlatformPath,
+  aliases: Object.keys(config.resolve.alias).filter(k => k.includes('frontend-platform')),
+});
 
 module.exports = config;

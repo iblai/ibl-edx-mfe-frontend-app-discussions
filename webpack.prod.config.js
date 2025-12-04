@@ -6,6 +6,15 @@ const config = createConfig('webpack-prod');
 // Use local frontend-platform instead of npm package
 const frontendPlatformPath = path.resolve('/openedx/frontend-platform/dist');
 
+// Ensure resolve and resolve.alias exist (createConfig might not initialize them)
+if (!config.resolve) {
+  config.resolve = {};
+}
+if (!config.resolve.alias) {
+  config.resolve.alias = {};
+}
+
+// Merge aliases with existing ones
 config.resolve.alias = {
   ...config.resolve.alias,
   '@src': path.resolve(__dirname, 'src'),

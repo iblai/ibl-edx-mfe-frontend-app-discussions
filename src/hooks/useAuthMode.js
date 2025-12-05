@@ -108,15 +108,19 @@ export function useAuthMode() {
       return 'jwt';
     }
 
-    // Priority 3: If in iframe WITHOUT cookies, use JWT if feature enabled and token available
-    if (jwtAuthEnabled && inIframe && !cookiesAvailable && jwtToken) {
+    // Priority 3: If in iframe WITHOUT cookies AND we have a JWT token, use JWT mode
+    // This applies even if jwtAuthEnabled is false, because the parent sent us a token
+    // The jwtAuthEnabled flag only controls whether we listen for tokens, not whether we use them
+    if (inIframe && !cookiesAvailable && jwtToken) {
       const logData = {
         mode: 'jwt',
         jwtAuthEnabled,
         inIframe,
         cookiesAvailable: false,
         hasJwtToken: !!jwtToken,
-        reason: 'in iframe, no cookies, JWT token available',
+        reason: jwtAuthEnabled
+          ? 'in iframe, no cookies, JWT token available (feature enabled)'
+          : 'in iframe, no cookies, JWT token received via postMessage (feature disabled but token received)',
       };
       console.log('[JWT Auth] Authentication mode determined - using JWT', logData);
       logInfo('[JWT Auth] Authentication mode determined', logData);
@@ -126,16 +130,15 @@ export function useAuthMode() {
     // Default to cookie-based authentication
     // This covers:
     // - Not in iframe (direct access) - always use cookies
-    // - JWT auth feature is disabled
     // - In iframe but no JWT token received yet (will wait for token or fallback to cookies)
+    // - Cookies are available (same-origin iframe)
     const logData = {
       mode: 'cookie',
       jwtAuthEnabled,
       inIframe,
       cookiesAvailable,
       hasJwtToken: !!jwtToken,
-      reason: !jwtAuthEnabled ? 'feature disabled' :
-              !inIframe ? 'not in iframe' :
+      reason: !inIframe ? 'not in iframe' :
               cookiesAvailable ? 'cookies available' :
               !jwtToken ? 'no JWT token' : 'unknown',
     };

@@ -314,26 +314,49 @@ export function useJWTToken() {
     logToServer('jwt_hook_initialized', logData);
 
     // Send ready message to parent window when hook is initialized (if in iframe)
-    if (inIframe && window.parent && window.parent !== window) {
+    // Always send ready message if in iframe, regardless of jwtAuthEnabled
+    // This allows the parent to know the MFE is ready to receive JWT tokens
+    const hasParent = window.parent && window.parent !== window;
+    console.log('[JWT Auth] Checking if ready message should be sent', {
+      inIframe,
+      hasParent,
+      willSend: inIframe && hasParent,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (inIframe && hasParent) {
       try {
         const readyMessage = {
           type: 'auth.jwt.ready',
         };
         console.log('[JWT Auth] Sending ready message to parent window', {
           message: readyMessage,
+          parentExists: !!window.parent,
+          parentSameAsSelf: window.parent === window,
           timestamp: new Date().toISOString(),
         });
         // Send to parent - use '*' for origin since we don't know the parent origin
         // The parent will validate the origin on their side
         window.parent.postMessage(readyMessage, '*');
+        console.log('[JWT Auth] ✅ Ready message sent successfully', {
+          timestamp: new Date().toISOString(),
+        });
         logInfo('[JWT Auth] Ready message sent to parent', {});
       } catch (error) {
-        console.error('[JWT Auth] Error sending ready message to parent', {
+        console.error('[JWT Auth] ❌ Error sending ready message to parent', {
           error: error.message,
+          errorStack: error.stack,
           timestamp: new Date().toISOString(),
         });
         logError('[JWT Auth] Error sending ready message to parent', { error: error.message });
       }
+    } else {
+      console.log('[JWT Auth] Not sending ready message', {
+        reason: !inIframe ? 'not in iframe' : !hasParent ? 'no parent window' : 'unknown',
+        inIframe,
+        hasParent,
+        timestamp: new Date().toISOString(),
+      });
     }
   }, [testToken]);
 

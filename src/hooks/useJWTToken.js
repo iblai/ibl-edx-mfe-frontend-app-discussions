@@ -22,12 +22,6 @@ import { getConfig } from '@edx/frontend-platform';
  *   - error: string | null - Error message if token reception fails
  */
 export function useJWTToken() {
-  console.log('[JWT Auth] 🔧 useJWTToken hook called/initialized', {
-    timestamp: new Date().toISOString(),
-    hasEarlyToken: !!window.__EARLY_JWT_TOKEN__,
-    earlyTokenLength: window.__EARLY_JWT_TOKEN__?.length || 0,
-  });
-
   // TEST MODE: Allow hardcoded JWT token for testing
   // Get from config (set via environment variable: JWT_TEST_TOKEN at build time)
   const config = getConfig();
@@ -36,37 +30,18 @@ export function useJWTToken() {
   // Check for early token stored by index.jsx listener (before React loaded)
   const earlyToken = window.__EARLY_JWT_TOKEN__ || null;
   if (earlyToken) {
-    console.log('[JWT Auth] Found early JWT token from index.jsx listener', {
-      tokenLength: earlyToken.length,
-      tokenPreview: earlyToken.substring(0, 30) + '...',
-      timestamp: new Date().toISOString(),
-    });
     // Clear it so it's only used once
     delete window.__EARLY_JWT_TOKEN__;
   }
 
-  // Log test token presence - log full token for verification in test mode
+  // Log test token presence for production monitoring
   if (testToken) {
     const tokenPreview = testToken.substring(0, 50) + '...';
     const tokenLength = testToken.length;
-    console.log('[JWT Auth] TEST MODE: Hardcoded JWT token detected', {
-      tokenLength,
-      tokenPreview,
-      hasToken: true,
-      tokenStart: testToken.substring(0, 20),
-      // Log full token for verification (test mode only)
-      testTokenFull: testToken,
-    });
     logInfo('[JWT Auth] TEST MODE: Hardcoded JWT token detected', {
       tokenLength,
       tokenPreview,
       hasToken: true,
-    });
-  } else {
-    console.log('[JWT Auth] No test token found - will listen for postMessage', {
-      configAvailable: !!config,
-      configKeys: config ? Object.keys(config).filter(k => k.includes('JWT')) : [],
-      processEnvToken: !!process.env.JWT_TEST_TOKEN,
     });
   }
 
@@ -172,65 +147,30 @@ export function useJWTToken() {
    */
   const receiveMessage = useCallback((event) => {
     try {
-      // Force console output for iframe debugging - log ALL messages first
-      console.log('[JWT Auth] Received postMessage (ALL MESSAGES)', {
-        origin: event.origin,
-        type: event.data?.type,
-        hasData: !!event.data,
-        dataKeys: event.data ? Object.keys(event.data) : [],
-        fullData: event.data,
-        source: event.source,
-        timestamp: new Date().toISOString(),
-      });
       logInfo('[JWT Auth] Received postMessage', { origin: event.origin, type: event.data?.type });
 
       // Validate message origin for security
       const originValid = validateMessageOrigin(event.origin);
-      console.log('[JWT Auth] Origin validation result', {
-        origin: event.origin,
-        isValid: originValid,
-        timestamp: new Date().toISOString(),
-      });
 
       if (!originValid) {
-        // Log rejection with more details
         console.warn('[JWT Auth] Message rejected - origin not whitelisted', {
           origin: event.origin,
           messageType: event.data?.type,
-          timestamp: new Date().toISOString(),
         });
         logInfo('[JWT Auth] Message rejected - origin not whitelisted', { origin: event.origin });
         return;
       }
 
       const { data } = event;
-      console.log('[JWT Auth] Message passed origin validation', {
-        origin: event.origin,
-        dataType: data?.type,
-        hasData: !!data,
-        timestamp: new Date().toISOString(),
-      });
 
       // Check if this is a JWT token message
       if (!data || data.type !== 'auth.jwt.token') {
-        console.log('[JWT Auth] Message ignored - not a JWT token message', {
-          type: data?.type,
-          expectedType: 'auth.jwt.token',
-          hasData: !!data,
-          timestamp: new Date().toISOString(),
-        });
         logInfo('[JWT Auth] Message ignored - not a JWT token message', { type: data?.type });
         return;
       }
 
       // Extract token from message
       const jwtToken = data.edx_jwt_token || data.token;
-      console.log('[JWT Auth] Extracting token from message', {
-        hasEdxJwtToken: !!data.edx_jwt_token,
-        hasToken: !!data.token,
-        jwtTokenLength: jwtToken?.length || 0,
-        timestamp: new Date().toISOString(),
-      });
 
       if (!jwtToken) {
         console.error('[JWT Auth] JWT token not found in message', {
@@ -256,13 +196,6 @@ export function useJWTToken() {
       const tokenLength = trimmedToken.length;
       const tokenPreview = trimmedToken.substring(0, 20) + '...';
 
-      console.log('[JWT Auth] JWT token received and validated', {
-        tokenLength,
-        tokenPreview,
-        hasToken: !!trimmedToken,
-        tokenStart: trimmedToken.substring(0, 30),
-        timestamp: new Date().toISOString(),
-      });
       logInfo('[JWT Auth] JWT token received', {
         tokenLength,
         tokenPreview,
@@ -303,80 +236,30 @@ export function useJWTToken() {
     }
   }, [requestTokenRefresh, setupExpiryCheck]);
 
-  // Log hook initialization with both console.log and logInfo
+  // Log hook initialization for production monitoring
   useEffect(() => {
     const inIframe = window.self !== window.top;
-    const logData = {
+    logInfo('[JWT Auth] useJWTToken hook initialized', {
       inIframe,
       hasTestToken: !!testToken,
-      tokenLength: testToken ? testToken.length : 0,
-      tokenPreview: testToken ? testToken.substring(0, 30) + '...' : null,
-    };
-
-    // Use console.log to ensure visibility even if logInfo doesn't work
-    // Force output to console with multiple methods
-    if (testToken) {
-      console.log('[JWT Auth] TEST MODE: Using hardcoded JWT token', {
-        tokenLength: testToken.length,
-        tokenPreview: testToken.substring(0, 30) + '...',
-        tokenStart: testToken.substring(0, 20),
-        tokenEnd: '...' + testToken.substring(testToken.length - 10),
-        fullToken: testToken, // Log full token for testing (remove in production)
-      });
-      console.log('[JWT Auth] useJWTToken hook initialized - TEST MODE with hardcoded token', logData);
-    } else {
-      console.log('[JWT Auth] useJWTToken hook initialized - listening for JWT tokens via postMessage', logData);
-    }
-    console.info('[JWT Auth] useJWTToken hook initialized', logData);
-    logInfo('[JWT Auth] useJWTToken hook initialized', logData);
-
-    // Log to server for Docker log visibility
-    logToServer('jwt_hook_initialized', logData);
+    });
 
     // Send ready message to parent window when hook is initialized (if in iframe)
     // Always send ready message if in iframe, regardless of jwtAuthEnabled
-    // This allows the parent to know the MFE is ready to receive JWT tokens
     const hasParent = window.parent && window.parent !== window;
-    console.log('[JWT Auth] Checking if ready message should be sent', {
-      inIframe,
-      hasParent,
-      willSend: inIframe && hasParent,
-      timestamp: new Date().toISOString(),
-    });
-
     if (inIframe && hasParent) {
       try {
         const readyMessage = {
           type: 'auth.jwt.ready',
         };
-        console.log('[JWT Auth] Sending ready message to parent window', {
-          message: readyMessage,
-          parentExists: !!window.parent,
-          parentSameAsSelf: window.parent === window,
-          timestamp: new Date().toISOString(),
-        });
-        // Send to parent - use '*' for origin since we don't know the parent origin
-        // The parent will validate the origin on their side
         window.parent.postMessage(readyMessage, '*');
-        console.log('[JWT Auth] ✅ Ready message sent successfully', {
-          timestamp: new Date().toISOString(),
-        });
         logInfo('[JWT Auth] Ready message sent to parent', {});
       } catch (error) {
-        console.error('[JWT Auth] ❌ Error sending ready message to parent', {
+        console.error('[JWT Auth] Error sending ready message to parent', {
           error: error.message,
-          errorStack: error.stack,
-          timestamp: new Date().toISOString(),
         });
         logError('[JWT Auth] Error sending ready message to parent', { error: error.message });
       }
-    } else {
-      console.log('[JWT Auth] Not sending ready message', {
-        reason: !inIframe ? 'not in iframe' : !hasParent ? 'no parent window' : 'unknown',
-        inIframe,
-        hasParent,
-        timestamp: new Date().toISOString(),
-      });
     }
   }, [testToken]);
 
@@ -384,30 +267,9 @@ export function useJWTToken() {
   useEventListener('message', receiveMessage);
 
   // Add a global message listener for debugging - logs ALL messages before filtering
-  useEffect(() => {
-    const globalMessageHandler = (event) => {
-      // Only log messages that might be JWT-related or from parent
-      if (event.data?.type === 'auth.jwt.token' || event.origin) {
-        console.log('[JWT Auth] Global message listener caught postMessage', {
-          origin: event.origin,
-          type: event.data?.type,
-          hasData: !!event.data,
-          source: event.source,
-          isFromParent: event.source === window.parent,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    };
-
-    window.addEventListener('message', globalMessageHandler);
-    console.log('[JWT Auth] Global message listener registered', {
-      timestamp: new Date().toISOString(),
-    });
-
-    return () => {
-      window.removeEventListener('message', globalMessageHandler);
-    };
-  }, []);
+  // Set this up immediately, not in useEffect, to catch early messages
+  // Global message listener is handled by receiveMessage callback
+  // No need for separate global listener in production
 
   /**
    * Clear the stored token.

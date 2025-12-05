@@ -59,30 +59,14 @@ export function useAuthMode() {
     const testToken = config?.JWT_TEST_TOKEN || process.env.JWT_TEST_TOKEN;
     const hasTestToken = !!testToken;
 
-    // Log token state for debugging
-    console.log('[JWT Auth] Auth mode determination', {
-      hasTestToken,
-      hasJwtToken: !!jwtToken,
-      jwtTokenLength: jwtToken ? jwtToken.length : 0,
-      jwtTokenPreview: jwtToken ? jwtToken.substring(0, 30) + '...' : null,
-      testTokenLength: testToken ? testToken.length : 0,
-      testTokenPreview: testToken ? testToken.substring(0, 30) + '...' : null,
-    });
 
     // Priority 1: If cookies are available (same base domain), always use cookie-based auth
     // This works for both direct access and same-origin iframes
     if (cookiesAvailable) {
-      const logData = {
+      logInfo('[JWT Auth] Authentication mode determined', {
         mode: 'cookie',
-        jwtAuthEnabled,
-        inIframe,
-        cookiesAvailable: true,
-        hasJwtToken: !!jwtToken,
-        hasTestToken,
-        reason: inIframe ? 'in iframe but cookies available (same base domain)' : 'direct access with cookies',
-      };
-      console.log('[JWT Auth] Authentication mode determined - using cookies', logData);
-      logInfo('[JWT Auth] Authentication mode determined', logData);
+        reason: inIframe ? 'in iframe but cookies available' : 'direct access with cookies',
+      });
       return 'cookie';
     }
 
@@ -91,46 +75,23 @@ export function useAuthMode() {
     if (hasTestToken && inIframe && !cookiesAvailable) {
       // Use test token directly if jwtToken from hook is not available yet
       const tokenToUse = jwtToken || testToken;
-      const logData = {
+      logInfo('[JWT Auth] Authentication mode determined (TEST MODE)', {
         mode: 'jwt',
-        jwtAuthEnabled,
-        inIframe,
-        cookiesAvailable: false,
-        hasJwtToken: !!jwtToken,
-        hasTestToken: true,
-        usingTestToken: !jwtToken,
-        tokenLength: tokenToUse ? tokenToUse.length : 0,
-        testMode: true,
         reason: 'in iframe, no cookies, test token available',
-      };
-      console.log('[JWT Auth] TEST MODE: Using JWT authentication (in iframe, no cookies)', logData);
-      logInfo('[JWT Auth] Authentication mode determined (TEST MODE)', logData);
+      });
       return 'jwt';
     }
 
     // Priority 3: If in iframe WITHOUT cookies AND we have a JWT token, use JWT mode
     // This applies even if jwtAuthEnabled is false, because the parent sent us a token
     // The jwtAuthEnabled flag only controls whether we listen for tokens, not whether we use them
-    console.log('[JWT Auth] Checking Priority 3 condition', {
-      inIframe,
-      cookiesAvailable,
-      hasJwtToken: !!jwtToken,
-      jwtTokenLength: jwtToken ? jwtToken.length : 0,
-      conditionMet: inIframe && !cookiesAvailable && jwtToken,
-    });
     if (inIframe && !cookiesAvailable && jwtToken) {
-      const logData = {
+      logInfo('[JWT Auth] Authentication mode determined', {
         mode: 'jwt',
-        jwtAuthEnabled,
-        inIframe,
-        cookiesAvailable: false,
-        hasJwtToken: !!jwtToken,
         reason: jwtAuthEnabled
           ? 'in iframe, no cookies, JWT token available (feature enabled)'
-          : 'in iframe, no cookies, JWT token received via postMessage (feature disabled but token received)',
-      };
-      console.log('[JWT Auth] ✅ Authentication mode determined - using JWT', logData);
-      logInfo('[JWT Auth] Authentication mode determined', logData);
+          : 'in iframe, no cookies, JWT token received via postMessage',
+      });
       return 'jwt';
     }
 
@@ -139,18 +100,13 @@ export function useAuthMode() {
     // - Not in iframe (direct access) - always use cookies
     // - In iframe but no JWT token received yet (will wait for token or fallback to cookies)
     // - Cookies are available (same-origin iframe)
-    const logData = {
+    const reason = !inIframe ? 'not in iframe' :
+                   cookiesAvailable ? 'cookies available' :
+                   !jwtToken ? 'no JWT token' : 'unknown';
+    logInfo('[JWT Auth] Authentication mode determined', {
       mode: 'cookie',
-      jwtAuthEnabled,
-      inIframe,
-      cookiesAvailable,
-      hasJwtToken: !!jwtToken,
-      reason: !inIframe ? 'not in iframe' :
-              cookiesAvailable ? 'cookies available' :
-              !jwtToken ? 'no JWT token' : 'unknown',
-    };
-    console.log('[JWT Auth] Authentication mode determined', logData);
-    logInfo('[JWT Auth] Authentication mode determined', logData);
+      reason,
+    });
     return 'cookie';
   }, [jwtAuthEnabled, inIframe, cookiesAvailable, jwtToken]);
 
@@ -169,15 +125,6 @@ export function useAuthMode() {
     jwtLoading, // Expose loading state for components that need it
   };
 
-  // Log the final token that will be used
-  if (authMode === 'jwt' && tokenToUse) {
-    console.log('[JWT Auth] Auth state - JWT token to use', {
-      tokenLength: tokenToUse.length,
-      tokenPreview: tokenToUse.substring(0, 30) + '...',
-      isFromTestToken: tokenToUse === testToken,
-      isFromHook: tokenToUse === jwtToken,
-    });
-  }
 
   // Log auth state changes to server for Docker log visibility
   useMemo(() => {

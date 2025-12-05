@@ -152,30 +152,73 @@ export function useJWTToken() {
    */
   const receiveMessage = useCallback((event) => {
     try {
-      // Force console output for iframe debugging
-      console.log('[JWT Auth] Received postMessage', { origin: event.origin, type: event.data?.type });
+      // Force console output for iframe debugging - log ALL messages first
+      console.log('[JWT Auth] Received postMessage (ALL MESSAGES)', {
+        origin: event.origin,
+        type: event.data?.type,
+        hasData: !!event.data,
+        dataKeys: event.data ? Object.keys(event.data) : [],
+        fullData: event.data,
+        source: event.source,
+        timestamp: new Date().toISOString(),
+      });
       logInfo('[JWT Auth] Received postMessage', { origin: event.origin, type: event.data?.type });
 
       // Validate message origin for security
-      if (!validateMessageOrigin(event.origin)) {
-        // Silently ignore messages from untrusted origins
-        // Don't set error here as this is expected behavior
+      const originValid = validateMessageOrigin(event.origin);
+      console.log('[JWT Auth] Origin validation result', {
+        origin: event.origin,
+        isValid: originValid,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (!originValid) {
+        // Log rejection with more details
+        console.warn('[JWT Auth] Message rejected - origin not whitelisted', {
+          origin: event.origin,
+          messageType: event.data?.type,
+          timestamp: new Date().toISOString(),
+        });
         logInfo('[JWT Auth] Message rejected - origin not whitelisted', { origin: event.origin });
         return;
       }
 
       const { data } = event;
+      console.log('[JWT Auth] Message passed origin validation', {
+        origin: event.origin,
+        dataType: data?.type,
+        hasData: !!data,
+        timestamp: new Date().toISOString(),
+      });
 
       // Check if this is a JWT token message
       if (!data || data.type !== 'auth.jwt.token') {
+        console.log('[JWT Auth] Message ignored - not a JWT token message', {
+          type: data?.type,
+          expectedType: 'auth.jwt.token',
+          hasData: !!data,
+          timestamp: new Date().toISOString(),
+        });
         logInfo('[JWT Auth] Message ignored - not a JWT token message', { type: data?.type });
         return;
       }
 
       // Extract token from message
       const jwtToken = data.edx_jwt_token || data.token;
+      console.log('[JWT Auth] Extracting token from message', {
+        hasEdxJwtToken: !!data.edx_jwt_token,
+        hasToken: !!data.token,
+        jwtTokenLength: jwtToken?.length || 0,
+        timestamp: new Date().toISOString(),
+      });
 
       if (!jwtToken) {
+        console.error('[JWT Auth] JWT token not found in message', {
+          dataKeys: Object.keys(data),
+          hasEdxJwtToken: !!data.edx_jwt_token,
+          hasToken: !!data.token,
+          timestamp: new Date().toISOString(),
+        });
         setError('JWT token not found in message');
         setIsLoading(false);
         return;
@@ -193,6 +236,13 @@ export function useJWTToken() {
       const tokenLength = trimmedToken.length;
       const tokenPreview = trimmedToken.substring(0, 20) + '...';
 
+      console.log('[JWT Auth] JWT token received and validated', {
+        tokenLength,
+        tokenPreview,
+        hasToken: !!trimmedToken,
+        tokenStart: trimmedToken.substring(0, 30),
+        timestamp: new Date().toISOString(),
+      });
       logInfo('[JWT Auth] JWT token received', {
         tokenLength,
         tokenPreview,
@@ -262,10 +312,59 @@ export function useJWTToken() {
 
     // Log to server for Docker log visibility
     logToServer('jwt_hook_initialized', logData);
+
+    // Send ready message to parent window when hook is initialized (if in iframe)
+    if (inIframe && window.parent && window.parent !== window) {
+      try {
+        const readyMessage = {
+          type: 'auth.jwt.ready',
+        };
+        console.log('[JWT Auth] Sending ready message to parent window', {
+          message: readyMessage,
+          timestamp: new Date().toISOString(),
+        });
+        // Send to parent - use '*' for origin since we don't know the parent origin
+        // The parent will validate the origin on their side
+        window.parent.postMessage(readyMessage, '*');
+        logInfo('[JWT Auth] Ready message sent to parent', {});
+      } catch (error) {
+        console.error('[JWT Auth] Error sending ready message to parent', {
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        });
+        logError('[JWT Auth] Error sending ready message to parent', { error: error.message });
+      }
+    }
   }, [testToken]);
 
   // Listen for postMessage events (after initialization logging)
   useEventListener('message', receiveMessage);
+
+  // Add a global message listener for debugging - logs ALL messages before filtering
+  useEffect(() => {
+    const globalMessageHandler = (event) => {
+      // Only log messages that might be JWT-related or from parent
+      if (event.data?.type === 'auth.jwt.token' || event.origin) {
+        console.log('[JWT Auth] Global message listener caught postMessage', {
+          origin: event.origin,
+          type: event.data?.type,
+          hasData: !!event.data,
+          source: event.source,
+          isFromParent: event.source === window.parent,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    };
+
+    window.addEventListener('message', globalMessageHandler);
+    console.log('[JWT Auth] Global message listener registered', {
+      timestamp: new Date().toISOString(),
+    });
+
+    return () => {
+      window.removeEventListener('message', globalMessageHandler);
+    };
+  }, []);
 
   /**
    * Clear the stored token.

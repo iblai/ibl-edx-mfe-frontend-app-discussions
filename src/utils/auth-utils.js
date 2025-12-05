@@ -128,8 +128,21 @@ export function validateMessageOrigin(origin) {
     // Get config
     const config = getConfig();
 
+    console.log('[JWT Auth] Starting origin validation', {
+      origin,
+      hasConfig: !!config,
+      jwtAuthEnabled: config?.JWT_AUTH_ENABLED,
+      whitelist: config?.JWT_AUTH_ORIGIN_WHITELIST,
+      timestamp: new Date().toISOString(),
+    });
+
     // Check if JWT auth is enabled
     if (!config.JWT_AUTH_ENABLED) {
+      console.warn('[JWT Auth] Origin validation FAILED - JWT_AUTH_ENABLED is false', {
+        origin,
+        jwtAuthEnabled: config?.JWT_AUTH_ENABLED,
+        timestamp: new Date().toISOString(),
+      });
       logInfo('[JWT Auth] Origin validation', { origin, valid: false, reason: 'JWT_AUTH_ENABLED is false' });
       return false;
     }
@@ -146,6 +159,12 @@ export function validateMessageOrigin(origin) {
         logInfo('[JWT Auth] Origin validation (dev mode)', { origin, valid: true, reason: 'development mode - no whitelist' });
         return true;
       }
+      console.warn('[JWT Auth] Origin validation FAILED - whitelist is empty', {
+        origin,
+        whitelist,
+        isArray: Array.isArray(whitelist),
+        timestamp: new Date().toISOString(),
+      });
       logInfo('[JWT Auth] Origin validation', { origin, valid: false, reason: 'whitelist is empty' });
       return false;
     }
@@ -179,10 +198,22 @@ export function validateMessageOrigin(origin) {
       return false;
     });
 
+    console.log('[JWT Auth] Origin validation result', {
+      origin,
+      isValid,
+      whitelist,
+      timestamp: new Date().toISOString(),
+    });
     logInfo('[JWT Auth] Origin validation', { origin, valid: isValid, whitelist });
     return isValid;
   } catch (e) {
     // Error in validation - reject for security
+    console.error('[JWT Auth] Error validating message origin', {
+      origin,
+      error: e.message,
+      stack: e.stack,
+      timestamp: new Date().toISOString(),
+    });
     logError('[JWT Auth] Error validating message origin', { origin, error: e.message });
     return false;
   }

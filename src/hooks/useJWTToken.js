@@ -22,6 +22,12 @@ import { getConfig } from '@edx/frontend-platform';
  *   - error: string | null - Error message if token reception fails
  */
 export function useJWTToken() {
+  console.log('[JWT Auth] 🔧 useJWTToken hook called/initialized', {
+    timestamp: new Date().toISOString(),
+    hasEarlyToken: !!window.__EARLY_JWT_TOKEN__,
+    earlyTokenLength: window.__EARLY_JWT_TOKEN__?.length || 0,
+  });
+
   // TEST MODE: Allow hardcoded JWT token for testing
   // Get from config (set via environment variable: JWT_TEST_TOKEN at build time)
   const config = getConfig();

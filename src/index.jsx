@@ -78,13 +78,17 @@ subscribe(APP_INIT_ERROR, (error) => {
   const jwtAuthEnabled = process.env.JWT_AUTH_ENABLED === 'true' || !!process.env.JWT_TEST_TOKEN;
   const isJWTIframeMode = isInIframe && jwtAuthEnabled;
 
-  if (isJWTIframeMode) {
-    // Check for JWT token (test token or from window)
-    const hasJwtToken = !!process.env.JWT_TEST_TOKEN || !!window.__JWT_TOKEN__;
+  // Also check for early token stored by index.jsx listener
+  const hasEarlyToken = !!window.__EARLY_JWT_TOKEN__;
+
+  if (isJWTIframeMode || (isInIframe && hasEarlyToken)) {
+    // Check for JWT token (test token, early token, or from window)
+    const hasJwtToken = !!process.env.JWT_TEST_TOKEN || !!window.__JWT_TOKEN__ || hasEarlyToken;
 
     if (hasJwtToken) {
       console.warn('[JWT Auth] APP_INIT_ERROR in JWT iframe mode - allowing app to continue', {
         hasJwtToken: true,
+        hasEarlyToken,
         errorMessage: error?.message,
       });
 

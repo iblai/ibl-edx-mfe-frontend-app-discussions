@@ -27,6 +27,18 @@ export function useJWTToken() {
   const config = getConfig();
   const testToken = config?.JWT_TEST_TOKEN || process.env.JWT_TEST_TOKEN || null;
 
+  // Check for early token stored by index.jsx listener (before React loaded)
+  const earlyToken = window.__EARLY_JWT_TOKEN__ || null;
+  if (earlyToken) {
+    console.log('[JWT Auth] Found early JWT token from index.jsx listener', {
+      tokenLength: earlyToken.length,
+      tokenPreview: earlyToken.substring(0, 30) + '...',
+      timestamp: new Date().toISOString(),
+    });
+    // Clear it so it's only used once
+    delete window.__EARLY_JWT_TOKEN__;
+  }
+
   // Log test token presence - log full token for verification in test mode
   if (testToken) {
     const tokenPreview = testToken.substring(0, 50) + '...';
@@ -52,8 +64,10 @@ export function useJWTToken() {
     });
   }
 
-  const [token, setToken] = useState(testToken); // Initialize with test token if available
-  const [isLoading, setIsLoading] = useState(!testToken); // If test token exists, not loading
+  // Initialize with test token, early token, or null
+  const initialToken = testToken || earlyToken || null;
+  const [token, setToken] = useState(initialToken); // Initialize with test token or early token if available
+  const [isLoading, setIsLoading] = useState(!initialToken); // If token exists, not loading
   const [error, setError] = useState(null);
   const expiryCheckIntervalRef = useRef(null);
   const refreshRequestedRef = useRef(false);

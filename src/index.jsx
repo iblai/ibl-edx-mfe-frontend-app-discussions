@@ -134,6 +134,33 @@ console.log('[JWT Auth] Initialization auth strategy', {
     : 'JWT (allow unauthenticated, will use JWT token)',
 });
 
+// Set up message listener IMMEDIATELY to catch JWT tokens before React loads
+if (isInIframe) {
+  const earlyMessageHandler = (event) => {
+    if (event.data?.type === 'auth.jwt.token') {
+      console.warn('[JWT Auth] 🚨 EARLY LISTENER: JWT TOKEN MESSAGE RECEIVED in index.jsx!', {
+        origin: event.origin,
+        type: event.data?.type,
+        hasToken: !!event.data?.edx_jwt_token,
+        tokenLength: event.data?.edx_jwt_token?.length || 0,
+        timestamp: new Date().toISOString(),
+      });
+      // Store token temporarily so useJWTToken hook can pick it up
+      if (event.data?.edx_jwt_token) {
+        window.__EARLY_JWT_TOKEN__ = event.data.edx_jwt_token;
+        console.log('[JWT Auth] Stored early JWT token in window.__EARLY_JWT_TOKEN__', {
+          tokenLength: event.data.edx_jwt_token.length,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  };
+  window.addEventListener('message', earlyMessageHandler);
+  console.log('[JWT Auth] ✅ Early message listener registered in index.jsx (before React)', {
+    timestamp: new Date().toISOString(),
+  });
+}
+
 // Send ready message to parent when MFE initializes in iframe
 // This happens early, before React components render, to ensure parent knows MFE is ready
 if (isInIframe && window.parent && window.parent !== window) {

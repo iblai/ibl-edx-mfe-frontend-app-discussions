@@ -134,6 +134,32 @@ console.log('[JWT Auth] Initialization auth strategy', {
     : 'JWT (allow unauthenticated, will use JWT token)',
 });
 
+// Send ready message to parent when MFE initializes in iframe
+// This happens early, before React components render, to ensure parent knows MFE is ready
+if (isInIframe && window.parent && window.parent !== window) {
+  try {
+    const readyMessage = {
+      type: 'auth.jwt.ready',
+    };
+    console.log('[JWT Auth] Sending ready message to parent during initialization', {
+      message: readyMessage,
+      hasTestToken,
+      jwtAuthEnabled,
+      timestamp: new Date().toISOString(),
+    });
+    window.parent.postMessage(readyMessage, '*');
+    console.log('[JWT Auth] ✅ Ready message sent to parent during initialization', {
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[JWT Auth] ❌ Error sending ready message during initialization', {
+      error: error.message,
+      errorStack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
+  }
+}
+
 initialize({
   requireAuthenticatedUser: shouldRequireAuth,
   messages,

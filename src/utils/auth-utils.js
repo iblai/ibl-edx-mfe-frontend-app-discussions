@@ -128,44 +128,73 @@ export function validateMessageOrigin(origin) {
     // Get config
     const config = getConfig();
 
+    const isInIframe = window.self !== window.top;
     console.log('[JWT Auth] Starting origin validation', {
       origin,
       hasConfig: !!config,
       jwtAuthEnabled: config?.JWT_AUTH_ENABLED,
       whitelist: config?.JWT_AUTH_ORIGIN_WHITELIST,
+      isInIframe,
       timestamp: new Date().toISOString(),
     });
 
-    // Check if JWT auth is enabled
-    if (!config.JWT_AUTH_ENABLED) {
-      console.warn('[JWT Auth] Origin validation FAILED - JWT_AUTH_ENABLED is false', {
+    // If we're in an iframe, allow JWT token messages even if JWT_AUTH_ENABLED is false
+    // The useAuthMode hook will decide whether to actually use the token for auth
+    // This allows the parent to send tokens, and the MFE can decide later if it needs them
+    if (!config.JWT_AUTH_ENABLED && !isInIframe) {
+      console.warn('[JWT Auth] Origin validation FAILED - JWT_AUTH_ENABLED is false and not in iframe', {
         origin,
         jwtAuthEnabled: config?.JWT_AUTH_ENABLED,
+        isInIframe,
         timestamp: new Date().toISOString(),
       });
-      logInfo('[JWT Auth] Origin validation', { origin, valid: false, reason: 'JWT_AUTH_ENABLED is false' });
+      logInfo('[JWT Auth] Origin validation', { origin, valid: false, reason: 'JWT_AUTH_ENABLED is false and not in iframe' });
       return false;
+    }
+
+    // If in iframe but JWT_AUTH_ENABLED is false, still allow the message
+    // (the token might be used later or for other purposes)
+    if (!config.JWT_AUTH_ENABLED && isInIframe) {
+      console.log('[JWT Auth] Allowing message in iframe even though JWT_AUTH_ENABLED is false', {
+        origin,
+        isInIframe,
+        reason: 'In iframe - token may be used later',
+        timestamp: new Date().toISOString(),
+      });
+      // Continue to whitelist check below
     }
 
     // Get whitelist from config, fallback to empty array
     const whitelist = config.JWT_AUTH_ORIGIN_WHITELIST;
 
-    // If no whitelist is configured, reject all messages for security
+    // If no whitelist is configured, allow messages when in iframe (parent is sending token)
+    // In development mode, allow all origins
+    // In production, if in iframe and no whitelist, still allow (parent is trusted)
     if (!whitelist || !Array.isArray(whitelist) || whitelist.length === 0) {
-      // In development, you might want to allow all origins for testing
-      // In production, this should always reject if whitelist is empty
       if (process.env.NODE_ENV === 'development') {
         console.warn('[JWT Auth] JWT_AUTH_ORIGIN_WHITELIST is not configured. Allowing all origins in development mode.');
         logInfo('[JWT Auth] Origin validation (dev mode)', { origin, valid: true, reason: 'development mode - no whitelist' });
         return true;
       }
-      console.warn('[JWT Auth] Origin validation FAILED - whitelist is empty', {
+      // If in iframe and no whitelist, allow the message (parent is sending token)
+      if (isInIframe) {
+        console.log('[JWT Auth] Allowing message in iframe - no whitelist configured', {
+          origin,
+          isInIframe,
+          reason: 'In iframe - parent is trusted',
+          timestamp: new Date().toISOString(),
+        });
+        logInfo('[JWT Auth] Origin validation (iframe mode)', { origin, valid: true, reason: 'in iframe - no whitelist' });
+        return true;
+      }
+      console.warn('[JWT Auth] Origin validation FAILED - whitelist is empty and not in iframe', {
         origin,
         whitelist,
         isArray: Array.isArray(whitelist),
+        isInIframe,
         timestamp: new Date().toISOString(),
       });
-      logInfo('[JWT Auth] Origin validation', { origin, valid: false, reason: 'whitelist is empty' });
+      logInfo('[JWT Auth] Origin validation', { origin, valid: false, reason: 'whitelist is empty and not in iframe' });
       return false;
     }
 

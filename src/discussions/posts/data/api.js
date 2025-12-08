@@ -125,6 +125,10 @@ export const postThread = async (
   );
 
   const postData = snakeCaseObject(filteredData);
+
+  // Explicitly remove notify_all_learners after snake_case conversion as a safety measure
+  delete postData.notify_all_learners;
+
   const { data } = await getAuthenticatedHttpClient()
     .post(getThreadsApiUrl(), postData);
   return data;

@@ -101,33 +101,49 @@ export const postThread = async (
   } = {},
   enableInContextSidebar = false,
 ) => {
-  // Build the data object and filter out undefined values to avoid sending unwanted fields
+  // Build the data object - explicitly only include the fields we want to send
+  // DO NOT include notifyAllLearners or notify_all_learners
   const dataObject = {
     courseId,
     topicId,
     type,
     title,
     raw_body: content,
-    following,
-    anonymous,
-    anonymousToPeers,
-    groupId: cohort,
-    enableInContextSidebar,
   };
 
-  // Remove undefined values and explicitly exclude notify_all_learners to prevent them from being sent to the backend
-  const filteredData = Object.fromEntries(
-    Object.entries(dataObject).filter(([key, value]) =>
-      value !== undefined &&
-      key !== 'notifyAllLearners' &&
-      key !== 'notify_all_learners'
-    )
-  );
+  // Conditionally add optional fields only if they are defined
+  if (following !== undefined) {
+    dataObject.following = following;
+  }
+  if (anonymous !== undefined) {
+    dataObject.anonymous = anonymous;
+  }
+  if (anonymousToPeers !== undefined) {
+    dataObject.anonymousToPeers = anonymousToPeers;
+  }
+  if (cohort !== undefined) {
+    dataObject.groupId = cohort;
+  }
+  if (enableInContextSidebar !== undefined) {
+    dataObject.enableInContextSidebar = enableInContextSidebar;
+  }
 
-  const postData = snakeCaseObject(filteredData);
+  // Convert to snake_case
+  const postData = snakeCaseObject(dataObject);
 
-  // Explicitly remove notify_all_learners after snake_case conversion as a safety measure
+  // CRITICAL: Explicitly remove notify_all_learners in all possible forms as a safety measure
+  // This ensures it's never sent, even if it somehow got into the object
   delete postData.notify_all_learners;
+  delete postData.notifyAllLearners;
+  delete postData.notifyAlllearners;
+
+  // Final safety check: filter out any key containing 'notify' and 'learners'
+  Object.keys(postData).forEach((key) => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes('notify') && lowerKey.includes('learners')) {
+      delete postData[key];
+    }
+  });
 
   const { data } = await getAuthenticatedHttpClient()
     .post(getThreadsApiUrl(), postData);

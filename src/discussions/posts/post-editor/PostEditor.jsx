@@ -255,6 +255,8 @@ const PostEditor = ({
     `${section.displayName} / ${subsection.displayName}` || intl.formatMessage(messages.unnamedTopics)
   );
 
+  console.log('[Discussion-PostEditor] Component rendered, editExisting:', editExisting);
+
   return (
     <Formik
       enableReinitialize
@@ -269,8 +271,16 @@ const PostEditor = ({
       handleBlur,
       handleChange,
       resetForm,
-    }) => (
-      <Form className="m-4 card p-4 post-form" onSubmit={handleSubmit}>
+    }) => {
+      // Wrap handleSubmit to add logging
+      const wrappedHandleSubmit = (e) => {
+        console.log('[Discussion-PostEditor] handleSubmit called, event:', e);
+        console.log('[Discussion-PostEditor] Form values at submit:', values);
+        return handleSubmit(e);
+      };
+
+      return (
+      <Form className="m-4 card p-4 post-form" onSubmit={wrappedHandleSubmit}>
         <h4 className="mb-4 font-style" style={{ lineHeight: '16px' }}>
           {editExisting
             ? intl.formatMessage(messages.editPostHeading)
@@ -507,11 +517,12 @@ const PostEditor = ({
             state={submitting ? 'pending' : 'default'}
             className="ml-2"
             variant="primary"
-            onClick={handleSubmit}
+            onClick={wrappedHandleSubmit}
           />
         </div>
       </Form>
-    )}
+      );
+    }}
     </Formik>
   );
 };

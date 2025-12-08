@@ -272,6 +272,35 @@ export function setupAuthInterceptor() {
         // Log request details AFTER all modifications (so we see the final config)
         logRequestDetails(config, 'request');
 
+        // CRITICAL: Log request body/data for POST requests to threads endpoint
+        if (config.method === 'post' && url.includes('/api/discussion/v1/threads/')) {
+          console.log('[Discussion-Interceptor] ===== REQUEST INTERCEPTOR - POST TO THREADS =====');
+          console.log('[Discussion-Interceptor] Request URL:', url);
+          console.log('[Discussion-Interceptor] Request data/body:', config.data);
+          console.log('[Discussion-Interceptor] Request data type:', typeof config.data);
+          if (typeof config.data === 'string') {
+            try {
+              const parsed = JSON.parse(config.data);
+              console.log('[Discussion-Interceptor] Parsed request body:', parsed);
+              console.log('[Discussion-Interceptor] notify_all_learners in body?', 'notify_all_learners' in parsed);
+              if ('notify_all_learners' in parsed) {
+                console.log('[Discussion-Interceptor] ⚠️⚠️⚠️ WARNING: notify_all_learners found in request body!', parsed.notify_all_learners);
+              }
+            } catch (e) {
+              console.log('[Discussion-Interceptor] Could not parse request body as JSON:', e);
+            }
+          } else if (config.data && typeof config.data === 'object') {
+            console.log('[Discussion-Interceptor] Request body object:', config.data);
+            console.log('[Discussion-Interceptor] notify_all_learners in body?', 'notify_all_learners' in config.data);
+            if ('notify_all_learners' in config.data) {
+              console.log('[Discussion-Interceptor] ⚠️⚠️⚠️ WARNING: notify_all_learners found in request body!', config.data.notify_all_learners);
+              // Remove it here as a safety measure
+              delete config.data.notify_all_learners;
+              console.log('[Discussion-Interceptor] Removed notify_all_learners from request body');
+            }
+          }
+        }
+
         return config;
       },
       (error) => {

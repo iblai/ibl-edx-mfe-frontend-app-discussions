@@ -98,7 +98,6 @@ export const postThread = async (
     cohort,
     anonymous,
     anonymousToPeers,
-    notifyAllLearners,
   } = {},
   enableInContextSidebar = false,
 ) => {
@@ -113,7 +112,6 @@ export const postThread = async (
     anonymousToPeers,
     groupId: cohort,
     enableInContextSidebar,
-    notifyAllLearners,
   });
   const { data } = await getAuthenticatedHttpClient()
     .post(getThreadsApiUrl(), postData);

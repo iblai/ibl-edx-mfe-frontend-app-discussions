@@ -180,7 +180,6 @@ const PostEditor = ({
         anonymousToPeers: allowAnonymousToPeers ? values.anonymousToPeers : undefined,
         cohort,
         enableInContextSidebar,
-        notifyAllLearners: values.notifyAllLearners,
       }));
     }
     /* istanbul ignore if: TinyMCE is mocked so this cannot be easily tested */

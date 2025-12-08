@@ -131,6 +131,10 @@ export const postThread = async (
   // Convert to snake_case
   const postData = snakeCaseObject(dataObject);
 
+  console.log('[Discussion-postThread] API call - Endpoint:', getThreadsApiUrl());
+  console.log('[Discussion-postThread] Data object before snake_case:', dataObject);
+  console.log('[Discussion-postThread] PostData after snake_case (before filtering):', JSON.parse(JSON.stringify(postData)));
+
   // CRITICAL: Explicitly remove notify_all_learners in all possible forms as a safety measure
   // This ensures it's never sent, even if it somehow got into the object
   delete postData.notify_all_learners;
@@ -141,9 +145,13 @@ export const postThread = async (
   Object.keys(postData).forEach((key) => {
     const lowerKey = key.toLowerCase();
     if (lowerKey.includes('notify') && lowerKey.includes('learners')) {
+      console.log('[Discussion-postThread] WARNING: Found and removing key containing notify+learners:', key);
       delete postData[key];
     }
   });
+
+  console.log('[Discussion-postThread] Final postData being sent to backend:', JSON.parse(JSON.stringify(postData)));
+  console.log('[Discussion-postThread] notify_all_learners in postData?', 'notify_all_learners' in postData);
 
   const { data } = await getAuthenticatedHttpClient()
     .post(getThreadsApiUrl(), postData);

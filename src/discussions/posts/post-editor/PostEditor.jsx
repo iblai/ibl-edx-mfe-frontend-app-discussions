@@ -159,6 +159,7 @@ const PostEditor = ({
 
   const submitForm = useCallback(async (values, { resetForm }) => {
     if (editExisting) {
+      console.log('[Discussion-PostEditor] Submitting edit form with values:', values);
       await dispatchSubmit(updateExistingThread(postId, {
         topicId: values.topic,
         type: values.postType,
@@ -169,7 +170,7 @@ const PostEditor = ({
     } else {
       const cohort = canSelectCohort(values.topic) ? selectedCohort(values.cohort) : undefined;
       // if not allowed to set cohort, always undefined, so no value is sent to backend
-      await dispatchSubmit(createNewThread({
+      const threadData = {
         courseId,
         topicId: values.topic,
         type: values.postType,
@@ -180,7 +181,12 @@ const PostEditor = ({
         anonymousToPeers: allowAnonymousToPeers ? values.anonymousToPeers : undefined,
         cohort,
         enableInContextSidebar,
-      }));
+      };
+      console.log('[Discussion-PostEditor] Submitting new thread form');
+      console.log('[Discussion-PostEditor] All form values:', values);
+      console.log('[Discussion-PostEditor] Data being passed to createNewThread:', threadData);
+      console.log('[Discussion-PostEditor] notifyAllLearners in values?', 'notifyAllLearners' in values, values.notifyAllLearners);
+      await dispatchSubmit(createNewThread(threadData));
     }
     /* istanbul ignore if: TinyMCE is mocked so this cannot be easily tested */
     if (editorRef.current) {

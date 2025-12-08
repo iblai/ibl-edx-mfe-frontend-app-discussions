@@ -101,7 +101,8 @@ export const postThread = async (
   } = {},
   enableInContextSidebar = false,
 ) => {
-  const postData = snakeCaseObject({
+  // Build the data object and filter out undefined values to avoid sending unwanted fields
+  const dataObject = {
     courseId,
     topicId,
     type,
@@ -112,7 +113,18 @@ export const postThread = async (
     anonymousToPeers,
     groupId: cohort,
     enableInContextSidebar,
-  });
+  };
+
+  // Remove undefined values and explicitly exclude notify_all_learners to prevent them from being sent to the backend
+  const filteredData = Object.fromEntries(
+    Object.entries(dataObject).filter(([key, value]) =>
+      value !== undefined &&
+      key !== 'notifyAllLearners' &&
+      key !== 'notify_all_learners'
+    )
+  );
+
+  const postData = snakeCaseObject(filteredData);
   const { data } = await getAuthenticatedHttpClient()
     .post(getThreadsApiUrl(), postData);
   return data;

@@ -136,7 +136,11 @@ export const postThread = async (
 
   console.log('[Discussion-postThread] API call - Endpoint:', getThreadsApiUrl());
   console.log('[Discussion-postThread] Data object before snake_case:', dataObject);
-  console.log('[Discussion-postThread] PostData after snake_case (before filtering):', JSON.parse(JSON.stringify(postData)));
+  try {
+    console.log('[Discussion-postThread] PostData after snake_case (before filtering):', JSON.parse(JSON.stringify(postData)));
+  } catch (e) {
+    console.log('[Discussion-postThread] PostData after snake_case (before filtering):', postData);
+  }
 
   // CRITICAL: Explicitly remove notify_all_learners in all possible forms as a safety measure
   // This ensures it's never sent, even if it somehow got into the object
@@ -153,12 +157,23 @@ export const postThread = async (
     }
   });
 
-  console.log('[Discussion-postThread] Final postData being sent to backend:', JSON.parse(JSON.stringify(postData)));
+  try {
+    console.log('[Discussion-postThread] Final postData being sent to backend:', JSON.parse(JSON.stringify(postData)));
+  } catch (e) {
+    console.log('[Discussion-postThread] Final postData being sent to backend:', postData);
+  }
   console.log('[Discussion-postThread] notify_all_learners in postData?', 'notify_all_learners' in postData);
 
-  const { data } = await getAuthenticatedHttpClient()
-    .post(getThreadsApiUrl(), postData);
-  return data;
+  try {
+    const { data } = await getAuthenticatedHttpClient()
+      .post(getThreadsApiUrl(), postData);
+    console.log('[Discussion-postThread] ✅ POST request successful');
+    return data;
+  } catch (error) {
+    console.error('[Discussion-postThread] ❌ POST request failed:', error);
+    console.error('[Discussion-postThread] Failed request payload:', postData);
+    throw error;
+  }
 };
 
 /**

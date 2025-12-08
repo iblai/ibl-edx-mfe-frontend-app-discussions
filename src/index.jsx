@@ -31,6 +31,13 @@ if (typeof window !== 'undefined') {
     note: 'Using local frontend-platform from ibl-edx-mfe-frontend-platform (branch: ibl-develop)',
     webpackAlias: 'Active - @edx/frontend-platform resolves to local build',
   });
+
+  // Build version check - helps verify iframe is using latest build
+  console.log('[Discussion-BuildCheck] ===== BUILD VERSION CHECK =====');
+  console.log('[Discussion-BuildCheck] Build timestamp:', new Date().toISOString());
+  console.log('[Discussion-BuildCheck] Latest commit includes:', 'notify_all_learners removal + interceptor logging');
+  console.log('[Discussion-BuildCheck] If you see this log, the latest build is loaded');
+  console.log('[Discussion-BuildCheck] If you DON\'T see Discussion logs on submit, the build is cached');
 }
 
 // Shared function to render React app - called from both APP_READY and APP_INIT_ERROR (when allowing continue)

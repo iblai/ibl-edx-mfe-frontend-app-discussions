@@ -158,6 +158,8 @@ const PostEditor = ({
   );
 
   const submitForm = useCallback(async (values, { resetForm }) => {
+    console.log('[Discussion-PostEditor] ===== FORM SUBMISSION STARTED =====');
+    console.log('[Discussion-PostEditor] editExisting:', editExisting);
     if (editExisting) {
       console.log('[Discussion-PostEditor] Submitting edit form with values:', values);
       await dispatchSubmit(updateExistingThread(postId, {

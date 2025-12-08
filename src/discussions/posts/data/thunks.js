@@ -205,7 +205,9 @@ export function createNewThread({
   cohort,
   enableInContextSidebar,
 }) {
+  console.log('[Discussion-createNewThread] ===== THUNK FUNCTION CALLED =====');
   return async (dispatch) => {
+    console.log('[Discussion-createNewThread] ===== THUNK ASYNC FUNCTION EXECUTING =====');
     try {
       console.log('[Discussion-createNewThread] Thunk called with parameters:', {
         courseId,

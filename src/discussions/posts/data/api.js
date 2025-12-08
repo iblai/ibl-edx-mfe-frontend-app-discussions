@@ -101,6 +101,9 @@ export const postThread = async (
   } = {},
   enableInContextSidebar = false,
 ) => {
+  console.log('[Discussion-postThread] ===== API FUNCTION CALLED =====');
+  console.log('[Discussion-postThread] Function arguments:', { courseId, topicId, type, title, content, following, cohort, anonymous, anonymousToPeers, enableInContextSidebar });
+
   // Build the data object - explicitly only include the fields we want to send
   // DO NOT include notifyAllLearners or notify_all_learners
   const dataObject = {

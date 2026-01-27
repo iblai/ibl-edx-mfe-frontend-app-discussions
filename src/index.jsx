@@ -10,6 +10,13 @@ import {
   APP_INIT_ERROR, APP_READY, initialize, mergeConfig,
   subscribe,
 } from '@edx/frontend-platform';
+import {
+  fetchAuthenticatedUser,
+  ensureAuthenticatedUser,
+  setAuthenticatedUser,
+  getAuthenticatedUser,
+  hydrateAuthenticatedUser,
+} from '@edx/frontend-platform/auth';
 import { AppProvider, ErrorPage } from '@edx/frontend-platform/react';
 
 import Head from './components/Head/Head';
@@ -19,6 +26,7 @@ import messages from './i18n';
 import store from './store';
 import { AuthenticatedHttpClientProvider } from './contexts/AuthenticatedHttpClientContext';
 import { setupAuthInterceptor } from './utils/setupAuthInterceptor';
+import { decodeJWT } from './utils/jwt-utils';
 
 import './index.scss';
 
@@ -160,10 +168,75 @@ if (isInIframe && window.parent && window.parent !== window) {
   }
 }
 
+// Determine if we should use JWT auth mode (skip cookie-based /login_refresh call)
+const useJwtAuthMode = isInIframe && (hasTestToken || jwtAuthEnabled);
+
+/**
+ * Custom auth handler that skips the /login_refresh call in JWT mode.
+ * In JWT mode, authentication is handled via postMessage from the parent window,
+ * not via cookies. This prevents the 401 error from /login_refresh when cookies
+ * are blocked in Safari iframe context.
+ *
+ * @param {boolean} requireUser - Whether to redirect to login if not authenticated
+ * @param {boolean} hydrateUser - Whether to fetch additional user account data
+ */
+async function customAuthHandler(requireUser, hydrateUser) {
+  if (useJwtAuthMode) {
+    console.log('[JWT Auth] Using JWT auth mode - skipping cookie-based /login_refresh');
+
+    // Check for early token (from postMessage) or test token
+    const token = process.env.JWT_TEST_TOKEN || window.__EARLY_JWT_TOKEN__;
+
+    if (token) {
+      // Decode token and set user data
+      const decoded = decodeJWT(token);
+      if (decoded) {
+        const userData = {
+          userId: decoded.user_id,
+          username: decoded.preferred_username || decoded.username,
+          email: decoded.email,
+          roles: decoded.roles || [],
+          administrator: decoded.administrator || false,
+          name: decoded.name,
+        };
+        setAuthenticatedUser(userData);
+        console.log('[JWT Auth] User set from JWT token during init', {
+          username: userData.username,
+          userId: userData.userId,
+        });
+      } else {
+        console.warn('[JWT Auth] Failed to decode early JWT token');
+      }
+    } else {
+      console.log('[JWT Auth] No early token available - user will be set later via postMessage');
+      // Don't set user - it will be set later when token arrives via postMessage
+      // The AuthenticatedHttpClientProvider and useJWTToken hook handle this
+    }
+
+    // Skip hydrateUser in JWT mode - we don't have cookie auth to make the API call
+    return;
+  }
+
+  // Cookie mode - use normal auth flow
+  console.log('[JWT Auth] Using cookie auth mode');
+  if (requireUser) {
+    await ensureAuthenticatedUser(globalThis.location.href);
+  } else {
+    await fetchAuthenticatedUser();
+  }
+
+  if (hydrateUser && getAuthenticatedUser() !== null) {
+    // We intentionally do not await - additional data is nice-to-have
+    hydrateAuthenticatedUser();
+  }
+}
+
 initialize({
   requireAuthenticatedUser: shouldRequireAuth,
   messages,
   handlers: {
+    // Use custom auth handler that skips /login_refresh in JWT mode
+    auth: customAuthHandler,
     config: () => {
       mergeConfig({
         LEARNING_BASE_URL: process.env.LEARNING_BASE_URL,

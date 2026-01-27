@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 
 import {
   APP_INIT_ERROR, APP_READY, initialize, mergeConfig,
-  subscribe,
+  subscribe, getConfig,
 } from '@edx/frontend-platform';
 import {
   fetchAuthenticatedUser,
@@ -129,17 +129,13 @@ subscribe(APP_INIT_ERROR, (error) => {
 
 // Determine authentication strategy:
 // - If NOT in iframe: Always use cookie-based auth (require authenticated user)
-// - If in iframe WITH JWT token (test token): Use JWT auth (don't require cookie auth)
-// - If in iframe WITH JWT_AUTH_ENABLED: Use JWT auth (don't require cookie auth, token will come via postMessage)
-// - If in iframe WITHOUT JWT token AND WITHOUT JWT_AUTH_ENABLED: Use cookie-based auth (require authenticated user)
+// - If in iframe: Don't require auth upfront - let custom auth handler decide based on MFE_CONFIG
 const isInIframe = window.self !== window.top;
-const hasTestToken = !!process.env.JWT_TEST_TOKEN;
-const jwtAuthEnabled = process.env.JWT_AUTH_ENABLED === 'true';
 
-// Require cookie-based auth unless:
-// 1. We're in an iframe AND
-// 2. (We have a test token OR JWT auth is enabled - meaning we'll use JWT)
-const shouldRequireAuth = !isInIframe || (isInIframe && !hasTestToken && !jwtAuthEnabled);
+// For shouldRequireAuth, we only check isInIframe here.
+// The actual JWT_AUTH_ENABLED check happens inside customAuthHandler where getConfig() is available.
+// If in iframe, don't require auth upfront - let the custom handler decide.
+const shouldRequireAuth = !isInIframe;
 
 
 // Set up message listener IMMEDIATELY to catch JWT tokens before React loads
@@ -168,24 +164,40 @@ if (isInIframe && window.parent && window.parent !== window) {
   }
 }
 
-// Determine if we should use JWT auth mode (skip cookie-based /login_refresh call)
-const useJwtAuthMode = isInIframe && (hasTestToken || jwtAuthEnabled);
-
 /**
  * Custom auth handler that skips the /login_refresh call in JWT mode.
  * In JWT mode, authentication is handled via postMessage from the parent window,
  * not via cookies. This prevents the 401 error from /login_refresh when cookies
  * are blocked in Safari iframe context.
  *
+ * NOTE: This handler is called AFTER config is loaded, so getConfig() is available.
+ *
  * @param {boolean} requireUser - Whether to redirect to login if not authenticated
  * @param {boolean} hydrateUser - Whether to fetch additional user account data
  */
 async function customAuthHandler(requireUser, hydrateUser) {
+  // Get JWT_AUTH_ENABLED from MFE_CONFIG (set via Tutor plugin or /api/mfe_config/v1)
+  // This is checked here (not at module level) because getConfig() is only available after config loads
+  const config = getConfig();
+  const jwtAuthEnabled = config.JWT_AUTH_ENABLED === true || config.JWT_AUTH_ENABLED === 'true';
+  const hasTestToken = !!config.JWT_TEST_TOKEN;
+
+  // Determine if we should use JWT auth mode
+  const useJwtAuthMode = isInIframe && (jwtAuthEnabled || hasTestToken);
+
+  console.log('[JWT Auth] Auth handler called', {
+    isInIframe,
+    jwtAuthEnabled,
+    hasTestToken,
+    useJwtAuthMode,
+    configKeys: Object.keys(config).filter(k => k.includes('JWT')),
+  });
+
   if (useJwtAuthMode) {
     console.log('[JWT Auth] Using JWT auth mode - skipping cookie-based /login_refresh');
 
-    // Check for early token (from postMessage) or test token
-    const token = process.env.JWT_TEST_TOKEN || window.__EARLY_JWT_TOKEN__;
+    // Check for early token (from postMessage) or test token from config
+    const token = config.JWT_TEST_TOKEN || window.__EARLY_JWT_TOKEN__;
 
     if (token) {
       // Decode token and set user data

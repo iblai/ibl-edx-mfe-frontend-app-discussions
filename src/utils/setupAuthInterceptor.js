@@ -138,34 +138,14 @@ export function setupAuthInterceptor() {
           // Then also set on common and method-specific for Axios header merging
           const authHeaderValue = `JWT ${jwtToken}`;
 
-          // PRIMARY: Set directly on headers (this is what Axios will use)
+          // Set Authorization header directly on config.headers
+          // NOTE: Do NOT set config.headers.common or config.headers[method] - these get
+          // serialized as actual headers in newer Axios versions, causing CORS errors
           config.headers.Authorization = authHeaderValue;
 
-          // SECONDARY: Also set on common headers (Axios merges these for all methods)
-          if (!config.headers.common) {
-            config.headers.common = {};
-          }
-          config.headers.common.Authorization = authHeaderValue;
-
-          // TERTIARY: Also set on method-specific header (Axios merges these per method)
-          const method = (config.method || 'get').toLowerCase();
-          if (!config.headers[method]) {
-            config.headers[method] = {};
-          }
-          config.headers[method].Authorization = authHeaderValue;
-
-          // CRITICAL: Ensure the header is a string, not an object
-          // Axios expects headers to be strings, not objects
-          if (typeof config.headers.Authorization !== 'string') {
-            console.error('[JWT Auth] ERROR: Authorization header is not a string!', {
-              type: typeof config.headers.Authorization,
-              value: config.headers.Authorization,
-            });
-            config.headers.Authorization = authHeaderValue; // Force it to be a string
-          }
-          console.log('[JWT Auth] Authorization header', {
+          console.log('[JWT Auth] Authorization header set', {
             type: typeof config.headers.Authorization,
-            value: config.headers.Authorization,
+            preview: authHeaderValue.substring(0, 50) + '...',
           });
           // For cross-origin requests, disable credentials (cookies)
           // This ensures we're using JWT instead of cookies
@@ -225,48 +205,12 @@ export function setupAuthInterceptor() {
           });
         }
 
-        // CRITICAL: Final verification - ensure Authorization header is set correctly
-        // Axios merges headers from common, method-specific, and direct properties
-        // We need to ensure it's in the right place for Axios to use it
+        // Final verification - ensure Authorization header is set
         if (mode === 'jwt' && jwtToken) {
-          // Get method for this request (needed for method-specific header location)
-          const requestMethod = (config.method || 'get').toLowerCase();
-
-          // Final check - verify header is accessible from all locations
-          const directHeader = config.headers.Authorization;
-          const commonHeader = config.headers.common?.Authorization;
-          const methodHeader = config.headers[requestMethod]?.Authorization;
-
-          // If any are missing, set them all again
-          if (!directHeader || !commonHeader || !methodHeader) {
-            const authHeaderValue = `JWT ${jwtToken}`;
-            config.headers.Authorization = authHeaderValue;
-            if (!config.headers.common) {
-              config.headers.common = {};
-            }
-            config.headers.common.Authorization = authHeaderValue;
-            if (!config.headers[requestMethod]) {
-              config.headers[requestMethod] = {};
-            }
-            config.headers[requestMethod].Authorization = authHeaderValue;
-
-            console.warn('[JWT Auth] Re-applied Authorization header - some locations were missing', {
-              url,
-              hadDirect: !!directHeader,
-              hadCommon: !!commonHeader,
-              hadMethod: !!methodHeader,
-            });
+          if (!config.headers.Authorization) {
+            config.headers.Authorization = `JWT ${jwtToken}`;
+            console.warn('[JWT Auth] Re-applied Authorization header - was missing');
           }
-
-          // Final verification log
-          console.log('[JWT Auth] Final header verification before request', {
-            url,
-            method: config.method,
-            directHeader: config.headers.Authorization ? `${config.headers.Authorization.substring(0, 50)}...` : 'MISSING',
-            commonHeader: config.headers.common?.Authorization ? `${config.headers.common.Authorization.substring(0, 50)}...` : 'MISSING',
-            methodHeader: config.headers[requestMethod]?.Authorization ? `${config.headers[requestMethod].Authorization.substring(0, 50)}...` : 'MISSING',
-            allHeadersKeys: Object.keys(config.headers),
-          });
         }
 
         // Log request details AFTER all modifications (so we see the final config)

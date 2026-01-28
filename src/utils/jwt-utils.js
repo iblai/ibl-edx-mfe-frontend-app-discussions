@@ -41,7 +41,6 @@ export function decodeJWT(token) {
     // Parse JSON
     return JSON.parse(decoded);
   } catch (error) {
-    console.error('Error decoding JWT token:', error);
     return null;
   }
 }

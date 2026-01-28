@@ -41,9 +41,10 @@ function logErrorDetails(error, context = {}) {
     ...context,
   };
 
-  // Console logging (always visible)
-  console.error('[JWT Auth] Error:', errorInfo);
-  console.error('[JWT Auth] Error Stack trace:', error?.stack);
+  // Only log errors in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.error('[JWT Auth] Error:', errorInfo.message);
+  }
 
   // Frontend-platform logging (safe - checks if available)
   safeLogError('[JWT Auth] Error', errorInfo);
@@ -65,13 +66,7 @@ function logErrorDetails(error, context = {}) {
  * This is critical for debugging initialization failures.
  */
 export function setupGlobalErrorHandlers() {
-  // Log that we're setting up error handlers
-  console.log('[JWT Auth] Setting up global error handlers');
-  safeLogInfo('[JWT Auth] Setting up global error handlers', {
-    url: window.location.href,
-    referrer: document.referrer,
-    inIframe: window.self !== window.top,
-  });
+  // Silent setup - no console logging needed for production
 
   // Catch synchronous JavaScript errors
   window.onerror = (message, source, lineno, colno, error) => {
@@ -131,8 +126,6 @@ export function setupGlobalErrorHandlers() {
       });
     }
   }, true); // Use capture phase
-
-  console.log('[JWT Auth] Global error handlers installed');
 }
 
 /**
@@ -148,8 +141,10 @@ export function logInitializationMilestone(milestone, data = {}) {
     ...data,
   };
 
-  console.log(`[JWT Auth] Init: ${milestone}`, logData);
-  safeLogInfo(`[JWT Auth] Init: ${milestone}`, logData);
+  // Only log in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[JWT Auth] Init: ${milestone}`);
+  }
   logToServer('init_milestone', { milestone, ...data });
 }
 
@@ -175,8 +170,7 @@ export function logRequestDetails(config, phase = 'request') {
       : authHeader;
   }
 
-  console.log(`[JWT Auth] Request (${phase}):`, logData);
-  safeLogInfo(`[JWT Auth] Request (${phase})`, logData);
+  // Silent in production - server logging only
   logToServer(`request_${phase}`, {
     url: logData.url,
     method: logData.method,
@@ -218,8 +212,7 @@ export function logResponseDetails(response, phase = 'response') {
     timestamp: new Date().toISOString(),
   };
 
-  console.log(`[JWT Auth] Response (${phase}):`, logData);
-  safeLogInfo(`[JWT Auth] Response (${phase})`, logData);
+  // Silent in production - server logging only
   logToServer(`response_${phase}`, {
     url: logData.url,
     method: logData.method,
@@ -285,8 +278,10 @@ export function logErrorResponse(error) {
       : authHeader;
   }
 
-  console.error('[JWT Auth] Response Error:', logData);
-  safeLogError('[JWT Auth] Response Error', logData);
+  // Only log errors in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.error('[JWT Auth] Response Error:', logData.status, logData.url);
+  }
   logToServer('response_error', {
     url: logData.url,
     method: logData.method,

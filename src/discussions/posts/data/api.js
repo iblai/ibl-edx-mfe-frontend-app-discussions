@@ -101,11 +101,7 @@ export const postThread = async (
   } = {},
   enableInContextSidebar = false,
 ) => {
-  console.log('[Discussion-postThread] ===== API FUNCTION CALLED =====');
-  console.log('[Discussion-postThread] Function arguments:', { courseId, topicId, type, title, content, following, cohort, anonymous, anonymousToPeers, enableInContextSidebar });
-
   // Build the data object - explicitly only include the fields we want to send
-  // DO NOT include notifyAllLearners or notify_all_learners
   const dataObject = {
     courseId,
     topicId,
@@ -134,46 +130,22 @@ export const postThread = async (
   // Convert to snake_case
   const postData = snakeCaseObject(dataObject);
 
-  console.log('[Discussion-postThread] API call - Endpoint:', getThreadsApiUrl());
-  console.log('[Discussion-postThread] Data object before snake_case:', dataObject);
-  try {
-    console.log('[Discussion-postThread] PostData after snake_case (before filtering):', JSON.parse(JSON.stringify(postData)));
-  } catch (e) {
-    console.log('[Discussion-postThread] PostData after snake_case (before filtering):', postData);
-  }
-
-  // CRITICAL: Explicitly remove notify_all_learners in all possible forms as a safety measure
-  // This ensures it's never sent, even if it somehow got into the object
+  // Safety measure: remove notify_all_learners in all possible forms
   delete postData.notify_all_learners;
   delete postData.notifyAllLearners;
   delete postData.notifyAlllearners;
 
-  // Final safety check: filter out any key containing 'notify' and 'learners'
+  // Filter out any key containing 'notify' and 'learners'
   Object.keys(postData).forEach((key) => {
     const lowerKey = key.toLowerCase();
     if (lowerKey.includes('notify') && lowerKey.includes('learners')) {
-      console.log('[Discussion-postThread] WARNING: Found and removing key containing notify+learners:', key);
       delete postData[key];
     }
   });
 
-  try {
-    console.log('[Discussion-postThread] Final postData being sent to backend:', JSON.parse(JSON.stringify(postData)));
-  } catch (e) {
-    console.log('[Discussion-postThread] Final postData being sent to backend:', postData);
-  }
-  console.log('[Discussion-postThread] notify_all_learners in postData?', 'notify_all_learners' in postData);
-
-  try {
-    const { data } = await getAuthenticatedHttpClient()
-      .post(getThreadsApiUrl(), postData);
-    console.log('[Discussion-postThread] ✅ POST request successful');
-    return data;
-  } catch (error) {
-    console.error('[Discussion-postThread] ❌ POST request failed:', error);
-    console.error('[Discussion-postThread] Failed request payload:', postData);
-    throw error;
-  }
+  const { data } = await getAuthenticatedHttpClient()
+    .post(getThreadsApiUrl(), postData);
+  return data;
 };
 
 /**

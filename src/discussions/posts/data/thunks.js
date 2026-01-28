@@ -205,24 +205,8 @@ export function createNewThread({
   cohort,
   enableInContextSidebar,
 }) {
-  console.log('[Discussion-createNewThread] ===== THUNK FUNCTION CALLED =====');
   return async (dispatch) => {
-    console.log('[Discussion-createNewThread] ===== THUNK ASYNC FUNCTION EXECUTING =====');
     try {
-      console.log('[Discussion-createNewThread] Thunk called with parameters:', {
-        courseId,
-        topicId,
-        type,
-        title,
-        content,
-        following,
-        anonymous,
-        anonymousToPeers,
-        cohort,
-        enableInContextSidebar,
-      });
-      console.log('[Discussion-createNewThread] notifyAllLearners in parameters?', 'notifyAllLearners' in arguments[0]);
-
       dispatch(postThreadRequest({
         courseId,
         topicId,
@@ -241,8 +225,6 @@ export function createNewThread({
         anonymous,
         anonymousToPeers,
       };
-      console.log('[Discussion-createNewThread] Calling postThread with options:', postThreadOptions);
-      console.log('[Discussion-createNewThread] enableInContextSidebar:', enableInContextSidebar);
 
       const data = await postThread(courseId, topicId, type, title, content, postThreadOptions, enableInContextSidebar);
       dispatch(postThreadSuccess(camelCaseObject(data)));

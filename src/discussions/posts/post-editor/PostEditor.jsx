@@ -158,10 +158,7 @@ const PostEditor = ({
   );
 
   const submitForm = useCallback(async (values, { resetForm }) => {
-    console.log('[Discussion-PostEditor] ===== FORM SUBMISSION STARTED =====');
-    console.log('[Discussion-PostEditor] editExisting:', editExisting);
     if (editExisting) {
-      console.log('[Discussion-PostEditor] Submitting edit form with values:', values);
       await dispatchSubmit(updateExistingThread(postId, {
         topicId: values.topic,
         type: values.postType,
@@ -184,10 +181,6 @@ const PostEditor = ({
         cohort,
         enableInContextSidebar,
       };
-      console.log('[Discussion-PostEditor] Submitting new thread form');
-      console.log('[Discussion-PostEditor] All form values:', values);
-      console.log('[Discussion-PostEditor] Data being passed to createNewThread:', threadData);
-      console.log('[Discussion-PostEditor] notifyAllLearners in values?', 'notifyAllLearners' in values, values.notifyAllLearners);
       await dispatchSubmit(createNewThread(threadData));
     }
     /* istanbul ignore if: TinyMCE is mocked so this cannot be easily tested */
@@ -255,8 +248,6 @@ const PostEditor = ({
     `${section.displayName} / ${subsection.displayName}` || intl.formatMessage(messages.unnamedTopics)
   );
 
-  console.log('[Discussion-PostEditor] Component rendered, editExisting:', editExisting);
-
   return (
     <Formik
       enableReinitialize
@@ -271,16 +262,8 @@ const PostEditor = ({
       handleBlur,
       handleChange,
       resetForm,
-    }) => {
-      // Wrap handleSubmit to add logging
-      const wrappedHandleSubmit = (e) => {
-        console.log('[Discussion-PostEditor] handleSubmit called, event:', e);
-        console.log('[Discussion-PostEditor] Form values at submit:', values);
-        return handleSubmit(e);
-      };
-
-      return (
-      <Form className="m-4 card p-4 post-form" onSubmit={wrappedHandleSubmit}>
+    }) => (
+      <Form className="m-4 card p-4 post-form" onSubmit={handleSubmit}>
         <h4 className="mb-4 font-style" style={{ lineHeight: '16px' }}>
           {editExisting
             ? intl.formatMessage(messages.editPostHeading)
@@ -517,12 +500,11 @@ const PostEditor = ({
             state={submitting ? 'pending' : 'default'}
             className="ml-2"
             variant="primary"
-            onClick={wrappedHandleSubmit}
+            onClick={handleSubmit}
           />
         </div>
       </Form>
-      );
-    }}
+    )}
     </Formik>
   );
 };

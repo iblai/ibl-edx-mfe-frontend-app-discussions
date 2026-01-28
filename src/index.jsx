@@ -30,23 +30,6 @@ import { decodeJWT } from './utils/jwt-utils';
 
 import './index.scss';
 
-// Verify we're using local frontend-platform (not npm package)
-// This console log confirms webpack aliases are working and resolving to /openedx/frontend-platform/dist
-if (typeof window !== 'undefined') {
-  console.log('[JWT Auth] Frontend-Platform Verification', {
-    source: 'LOCAL BUILD',
-    path: '/openedx/frontend-platform/dist',
-    note: 'Using local frontend-platform from ibl-edx-mfe-frontend-platform (branch: ibl-develop)',
-    webpackAlias: 'Active - @edx/frontend-platform resolves to local build',
-  });
-
-  // Build version check - helps verify iframe is using latest build
-  console.log('[Discussion-BuildCheck] ===== BUILD VERSION CHECK =====');
-  console.log('[Discussion-BuildCheck] Build timestamp:', new Date().toISOString());
-  console.log('[Discussion-BuildCheck] Latest commit includes:', 'notify_all_learners removal + interceptor logging');
-  console.log('[Discussion-BuildCheck] If you see this log, the latest build is loaded');
-  console.log('[Discussion-BuildCheck] If you DON\'T see Discussion logs on submit, the build is cached');
-}
 
 // Shared function to render React app - called from both APP_READY and APP_INIT_ERROR (when allowing continue)
 let reactRoot = null;
@@ -58,7 +41,6 @@ function renderReactApp() {
 
   const rootElement = document.getElementById('root');
   if (!rootElement) {
-    console.error('[JWT Auth] Cannot render React app - root element not found');
     return;
   }
 
@@ -100,17 +82,9 @@ subscribe(APP_INIT_ERROR, (error) => {
     const hasJwtToken = !!process.env.JWT_TEST_TOKEN || !!window.__JWT_TOKEN__ || hasEarlyToken;
 
     if (hasJwtToken) {
-      console.warn('[JWT Auth] APP_INIT_ERROR in JWT iframe mode - allowing app to continue', {
-        hasJwtToken: true,
-        hasEarlyToken,
-        errorMessage: error?.message,
-      });
-
       // Force render React app after a delay to allow APP_READY to fire if it will
-      // If APP_READY doesn't fire, we'll render anyway
       setTimeout(() => {
         if (!reactRoot) {
-          console.warn('[JWT Auth] APP_READY did not fire - forcing React render');
           renderReactApp();
         }
       }, 500);
@@ -153,14 +127,9 @@ if (isInIframe) {
 // This happens early, before React components render, to ensure parent knows MFE is ready
 if (isInIframe && window.parent && window.parent !== window) {
   try {
-    const readyMessage = {
-      type: 'auth.jwt.ready',
-    };
-    window.parent.postMessage(readyMessage, '*');
+    window.parent.postMessage({ type: 'auth.jwt.ready' }, '*');
   } catch (error) {
-    console.error('[JWT Auth] Error sending ready message during initialization', {
-      error: error.message,
-    });
+    // Silent fail - parent may not be listening
   }
 }
 
@@ -185,16 +154,7 @@ async function customAuthHandler(requireUser, hydrateUser) {
   // Determine if we should use JWT auth mode
   const useJwtAuthMode = isInIframe && (jwtAuthEnabled || hasTestToken);
 
-  console.log('[JWT Auth] Auth handler called', {
-    isInIframe,
-    jwtAuthEnabled,
-    hasTestToken,
-    useJwtAuthMode,
-    configKeys: Object.keys(config).filter(k => k.includes('JWT')),
-  });
-
   if (useJwtAuthMode) {
-    console.log('[JWT Auth] Using JWT auth mode - skipping cookie-based /login_refresh');
 
     // Check for early token (from postMessage) or test token from config
     const token = config.JWT_TEST_TOKEN || window.__EARLY_JWT_TOKEN__;
@@ -212,15 +172,8 @@ async function customAuthHandler(requireUser, hydrateUser) {
           name: decoded.name,
         };
         setAuthenticatedUser(userData);
-        console.log('[JWT Auth] User set from JWT token during init', {
-          username: userData.username,
-          userId: userData.userId,
-        });
-      } else {
-        console.warn('[JWT Auth] Failed to decode early JWT token');
       }
     } else {
-      console.log('[JWT Auth] No early token available - user will be set later via postMessage');
       // Don't set user - it will be set later when token arrives via postMessage
       // The AuthenticatedHttpClientProvider and useJWTToken hook handle this
     }
@@ -230,7 +183,6 @@ async function customAuthHandler(requireUser, hydrateUser) {
   }
 
   // Cookie mode - use normal auth flow
-  console.log('[JWT Auth] Using cookie auth mode');
   if (requireUser) {
     await ensureAuthenticatedUser(globalThis.location.href);
   } else {

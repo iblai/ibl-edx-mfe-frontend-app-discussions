@@ -153,11 +153,6 @@ export function useJWTToken() {
       const originValid = validateMessageOrigin(event.origin);
 
       if (!originValid) {
-        console.warn('[JWT Auth] Message rejected - origin not whitelisted', {
-          origin: event.origin,
-          messageType: event.data?.type,
-        });
-        logInfo('[JWT Auth] Message rejected - origin not whitelisted', { origin: event.origin });
         return;
       }
 
@@ -173,12 +168,6 @@ export function useJWTToken() {
       const jwtToken = data.edx_jwt_token || data.token;
 
       if (!jwtToken) {
-        console.error('[JWT Auth] JWT token not found in message', {
-          dataKeys: Object.keys(data),
-          hasEdxJwtToken: !!data.edx_jwt_token,
-          hasToken: !!data.token,
-          timestamp: new Date().toISOString(),
-        });
         setError('JWT token not found in message');
         setIsLoading(false);
         return;
@@ -230,7 +219,6 @@ export function useJWTToken() {
         setupExpiryCheck(trimmedToken);
       }
     } catch (err) {
-      console.error('Error processing JWT token message:', err);
       setError('Failed to process JWT token message');
       setIsLoading(false);
     }
@@ -249,16 +237,9 @@ export function useJWTToken() {
     const hasParent = window.parent && window.parent !== window;
     if (inIframe && hasParent) {
       try {
-        const readyMessage = {
-          type: 'auth.jwt.ready',
-        };
-        window.parent.postMessage(readyMessage, '*');
-        logInfo('[JWT Auth] Ready message sent to parent', {});
+        window.parent.postMessage({ type: 'auth.jwt.ready' }, '*');
       } catch (error) {
-        console.error('[JWT Auth] Error sending ready message to parent', {
-          error: error.message,
-        });
-        logError('[JWT Auth] Error sending ready message to parent', { error: error.message });
+        // Silent fail - parent may not be listening
       }
     }
   }, [testToken]);

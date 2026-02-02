@@ -1,6 +1,17 @@
 # Changelog
 
-## [Unreleased] - 2026-01-28
+## [0.1.1] - 2026-02-02
+
+### Fixed
+- **USE-JWT-COOKIE CORS Fix**: Suppress `USE-JWT-COOKIE` header to prevent CORS preflight failures on direct access
+  - When accessing the MFE directly (not in iframe), the backend does not provide JWT tokens
+  - The `USE-JWT-COOKIE` header was triggering CORS preflight requests that the server rejected
+  - Added `skipUseJwtCookieHeader` flag in auth interceptor to suppress the header
+  - MFE now correctly falls back to session cookie authentication on direct access
+
+---
+
+## [0.1.0] - 2026-01-28
 
 ### Fixed
 - **CORS Error Fix**: Removed `config.headers.common` to fix CORS errors with newer Axios versions

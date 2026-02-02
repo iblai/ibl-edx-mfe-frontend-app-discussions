@@ -97,6 +97,12 @@ export function setupAuthInterceptor() {
         }
 
 
+        // Always suppress the USE-JWT-COOKIE header to avoid CORS preflight failures.
+        // The server may not include USE-JWT-COOKIE in Access-Control-Allow-Headers,
+        // causing cross-origin requests to fail. In cookie mode, SessionAuthentication
+        // handles auth via session cookies. In JWT mode, the Authorization header is used.
+        config.skipUseJwtCookieHeader = true;
+
         // If we're in JWT mode and have a token, add Authorization header
         if (mode === 'jwt' && jwtToken) {
           // CRITICAL: Skip frontend-platform's JWT token refresh interceptor

@@ -13,6 +13,45 @@
       rel="stylesheet"
       href="<%=htmlWebpackPlugin.options.MFE_STATIC_CSS_DOMAIN%>/css/mfe.css"
     />
+    <script>
+      function isIframed() {
+        return window.self !== window.top;
+      }
+      function addCSSLink(cssUrl) {
+        // Create a new link element
+        var link = document.createElement('link');
+        
+        // Set the attributes for the link element
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = cssUrl;
+        
+        // Append the link element to the head
+        document.head.appendChild(link);
+      }
+      function addJSScript(jsUrl) {
+        // Check if the page is iframed
+        if (isIframed()) {
+            console.log("The webpage is iframed.");
+        } else {
+            console.log("The webpage is not iframed.");
+        }
+
+        // Create a new script element
+        var script = document.createElement('script');
+        
+        // Set the attributes for the script element
+        script.type = 'text/javascript';
+        script.src = jsUrl;
+        
+        // Append the script element to the head
+        document.head.appendChild(script);
+      }
+      if (isIframed()) {
+        addCSSLink(`${window.location.origin}/css/mfe.css`);
+        addJSScript(`${window.location.origin}/js/mfe.js`);
+      }
+    </script>
     <script defer>
       window.MathJax = {
         tex: {
